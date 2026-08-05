@@ -1,0 +1,8 @@
+*.db
+*.db-journal
+__pycache__/
+access_data/
+*.pyc
+.DS_Store
+.env
+*.token

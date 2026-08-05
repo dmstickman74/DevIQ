@@ -1,0 +1,3683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevIQ</title>
+<style>
+:root {
+  --teal: #003a49; --teal-light: #005066; --teal-dark: #002a36;
+  --green: #8cd44f; --green-hover: #71c22d; --green-light: #e8f5d8;
+  --cream: #f4f2ed; --surface: #ffffff; --border: #ddd8d0;
+  --text: #231f20; --text2: #6b6560; --text3: #9e9892;
+  --red: #c0392b; --orange: #e67e22; --blue: #2980b9;
+  --shadow-sm: 0 1px 3px rgba(0,58,73,.08);
+  --shadow-md: 0 4px 12px rgba(0,58,73,.1);
+  --shadow-lg: 0 8px 24px rgba(0,58,73,.12);
+  --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--cream); color: var(--text); font-size: 14px; }
+a { color: var(--teal); text-decoration: none; font-weight: 500; }
+a:hover { color: var(--teal-light); }
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; }
+
+/* Header */
+.header {
+  background: var(--teal); color: #fff; padding: 0 24px; display: flex;
+  align-items: center; height: 80px; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,58,73,.25); overflow: visible;
+}
+.header .logo { display: flex; align-items: center; gap: 10px; }
+.header .logo img { height: 70px; filter: brightness(0) invert(1); margin-top: 20px; }
+.header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.5px; }
+.header nav { display: flex; gap: 0; margin-left: 32px; height: 100%; flex: 1; }
+.header nav a {
+  display: flex; align-items: center; padding: 0 16px; color: rgba(255,255,255,.7);
+  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  border-bottom: 2px solid transparent; transition: all .15s;
+}
+.header nav a:hover { color: #fff; text-decoration: none; }
+.header nav a.active { color: #fff; border-bottom-color: var(--green); }
+.header-right { display: flex; align-items: center; height: 100%; gap: 0; margin-left: auto; }
+.header-right a {
+  display: flex; align-items: center; padding: 0 16px; color: rgba(255,255,255,.7);
+  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  border-bottom: 2px solid transparent; transition: all .15s; height: 100%;
+}
+.header-right a:hover { color: #fff; text-decoration: none; }
+.header-right a.active { color: #fff; border-bottom-color: var(--green); }
+.header-right .user-menu { position: relative; }
+.header-right .user-menu-btn {
+  display: flex; align-items: center; gap: 8px; padding: 0 16px;
+  color: rgba(255,255,255,.7); font-size: 13px; font-weight: 600;
+  cursor: pointer; height: 100%; border: none; background: none;
+  text-transform: uppercase; letter-spacing: .5px; transition: all .15s;
+}
+.header-right .user-menu-btn:hover { color: #fff; }
+.header-right .user-menu-btn .user-avatar {
+  width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff;
+}
+.user-dropdown {
+  display: none; position: absolute; top: 100%; right: 0; background: #fff;
+  border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 220px;
+  z-index: 200; overflow: hidden; margin-top: 4px;
+}
+.user-dropdown.open { display: block; }
+.user-dropdown .dropdown-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--text2);
+}
+.user-dropdown .dropdown-header strong { display: block; color: var(--text); font-size: 14px; }
+.header-right .user-dropdown a {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  color: var(--text); font-size: 13px; text-decoration: none; transition: background .1s;
+  text-transform: none; letter-spacing: normal; font-weight: 400; height: auto;
+  border-bottom: none;
+}
+.header-right .user-dropdown a:hover { background: #f4f2ed; color: var(--text); }
+.user-dropdown .dropdown-divider { border-top: 1px solid var(--border); margin: 4px 0; }
+.header-right .user-dropdown a.danger { color: #c0392b; }
+.header-right .user-dropdown a.danger:hover { color: #c0392b; }
+
+/* Layout */
+.container { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
+
+/* Filter bar */
+.filter-bar {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  padding: 16px 20px; margin-bottom: 16px;
+}
+.filter-bar-top {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+.search-wrap {
+  position: relative; flex: 1; min-width: 240px;
+}
+.search-wrap .search-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text3);
+  padding: 4px 6px; line-height: 1; display: none;
+}
+.search-wrap .search-clear:hover { color: var(--text); }
+.search-wrap .search-input:not(:placeholder-shown) ~ .search-clear { display: block; }
+.search-input {
+  width: 100%; padding: 9px 30px 9px 14px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 14px; background: var(--cream);
+  transition: all .15s; box-sizing: border-box;
+}
+.search-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,58,73,.1); background: #fff; }
+
+.btn {
+  padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--cream); }
+.btn-primary { background: var(--teal); color: #fff; border-color: var(--teal); }
+.btn-primary:hover { background: var(--teal-light); }
+.btn-green { background: var(--green); color: #fff; border-color: var(--green); }
+.btn-green:hover { background: var(--green-hover); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-danger { color: var(--red); }
+.btn-danger:hover { background: #fdf2f2; }
+
+/* Advanced Filters */
+.advanced-filters { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.filter-row {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+}
+.filter-row select, .filter-row input {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px;
+  background: #fff;
+}
+.filter-row select { min-width: 160px; }
+.filter-row .filter-value { flex: 1; min-width: 150px; }
+.filter-row .remove-filter {
+  background: none; border: none; color: var(--text3); font-size: 18px; padding: 4px 8px; cursor: pointer;
+}
+.filter-row .remove-filter:hover { color: var(--red); }
+.filter-actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.saved-filters-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.saved-filter-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+  background: var(--green-light); border: 1px solid #c5e8a0; border-radius: 16px;
+  font-size: 12px; font-weight: 500; cursor: pointer; color: #3d6b1a;
+}
+.saved-filter-chip:hover { background: #d4edb8; }
+.saved-filter-chip .delete-chip {
+  margin-left: 2px; font-size: 14px; opacity: .5; cursor: pointer;
+}
+.saved-filter-chip .delete-chip:hover { opacity: 1; color: var(--red); }
+
+/* Column Picker */
+.col-picker-wrap { position: relative; display: inline-block; }
+.col-picker-dropdown {
+  display: none; position: absolute; top: 100%; right: 0; margin-top: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); z-index: 200; width: 280px; max-height: 400px;
+  overflow: hidden;
+}
+.col-picker-dropdown.open { display: block; }
+.col-picker-search {
+  width: 100%; padding: 8px 12px; border: none; border-bottom: 1px solid var(--border);
+  font-size: 13px; outline: none;
+}
+.col-picker-list {
+  max-height: 340px; overflow-y: auto; padding: 6px 0;
+}
+.col-picker-item {
+  display: flex; align-items: center; gap: 8px; padding: 5px 12px;
+  font-size: 13px; cursor: pointer; transition: background .1s;
+}
+.col-picker-item:hover { background: var(--cream); }
+.col-picker-item input[type="checkbox"] { accent-color: var(--teal); }
+.col-picker-item.default-col { font-weight: 600; }
+
+/* Table */
+.table-wrap { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  background: var(--teal); color: rgba(255,255,255,.9); padding: 10px 12px; text-align: left;
+  font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+  cursor: pointer; white-space: nowrap; user-select: none;
+}
+.result-count {
+  font-size: 13px; font-weight: 600; color: var(--text2); padding: 10px 0 6px;
+}
+th:hover { background: var(--teal-light); }
+th .sort-arrow { margin-left: 4px; opacity: .5; font-size: 10px; }
+th.sorted .sort-arrow { opacity: 1; color: var(--green); }
+td { padding: 10px 12px; border-bottom: 1px solid #f0ede8; vertical-align: top; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr { transition: background .1s; }
+tbody tr:hover { background: #f9f7f4; }
+tbody tr.clickable { cursor: pointer; }
+.contact-name { font-weight: 600; color: var(--teal); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.badge-emails { background: #dbeafe; color: #1d4ed8; }
+.badge-calls { background: #dcfce7; color: #166534; }
+.badge-meetings { background: #fef3c7; color: #92400e; }
+.badge-notes { background: #f3e8ff; color: #6b21a8; }
+.badge-tasks { background: #e0e7ff; color: #3730a3; }
+
+.pagination {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; font-size: 13px; color: var(--text2);
+}
+.pagination button { padding: 7px 14px; }
+
+/* ──── Detail Page ──── */
+.detail-page { display: none; }
+.detail-page.active { display: block; }
+.detail-back {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
+  color: var(--text2); margin-bottom: 16px; cursor: pointer;
+  padding: 6px 12px; border-radius: 6px; border: none; background: none;
+}
+.detail-back:hover { background: rgba(0,58,73,.05); color: var(--teal); }
+
+.detail-top {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  padding: 24px; display: flex; gap: 20px; align-items: flex-start; margin-bottom: 16px;
+}
+.detail-avatar {
+  width: 64px; height: 64px; border-radius: 50%; background: var(--teal);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; flex-shrink: 0;
+}
+.detail-avatar.company-avatar { background: var(--green); color: #fff; }
+.detail-top-info h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.detail-top-info p { font-size: 14px; color: var(--text2); }
+.detail-top-quick {
+  display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap;
+}
+.detail-top-quick .quick-item {
+  font-size: 13px; display: flex; align-items: center; gap: 6px;
+}
+.quick-item .qi-label { color: var(--text3); font-size: 11px; text-transform: uppercase; font-weight: 600; }
+
+/* Accordion sections */
+.detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+.detail-grid .full-width { grid-column: 1 / -1; }
+
+.accordion {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.accordion-header {
+  padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; font-weight: 600; font-size: 14px; user-select: none;
+  background: var(--surface); border-bottom: 1px solid transparent;
+  transition: background .15s;
+}
+.accordion-header:hover { background: #faf8f5; }
+.accordion-header .acc-icon {
+  transition: transform .2s; font-size: 12px; color: var(--text3);
+}
+.accordion-header.open { border-bottom-color: var(--border); }
+.accordion-header.open .acc-icon { transform: rotate(180deg); }
+.accordion-body { display: none; padding: 16px 20px; }
+.accordion-body.open { display: block; }
+
+.props-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+@media (max-width: 600px) { .props-grid { grid-template-columns: 1fr; } }
+.prop { font-size: 13px; }
+.prop-label { font-weight: 600; color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+.prop-val { margin-top: 2px; word-break: break-word; line-height: 1.4; }
+
+/* Company cards */
+.company-link-card {
+  background: #faf8f5; border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px 16px; margin-bottom: 8px; cursor: pointer; transition: all .15s;
+}
+.company-link-card:hover { border-color: var(--teal); box-shadow: var(--shadow-sm); }
+.company-link-card h4 { font-size: 14px; color: var(--teal); margin-bottom: 2px; }
+.company-link-card p { font-size: 12px; color: var(--text2); }
+
+/* Activity timeline */
+.activity-filters { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.act-filter-btn {
+  padding: 5px 12px; border: 1px solid var(--border); border-radius: 16px;
+  font-size: 12px; cursor: pointer; background: var(--surface); font-weight: 500;
+  transition: all .15s;
+}
+.act-filter-btn:hover { background: #faf8f5; }
+.act-filter-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+
+.activity-item {
+  padding: 12px 0; border-bottom: 1px solid #f0ede8;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-meta {
+  display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--text2); margin-bottom: 4px; flex-wrap: wrap;
+}
+.activity-subject { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.activity-body {
+  font-size: 13px; color: var(--text2); max-height: 60px; overflow: hidden;
+  transition: max-height .3s; cursor: pointer; line-height: 1.5;
+  position: relative;
+}
+.activity-body::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px;
+  background: linear-gradient(transparent, var(--surface)); pointer-events: none;
+}
+.activity-body.expanded { max-height: none; }
+.activity-body.expanded::after { display: none; }
+.dir-in { color: #16a34a; font-weight: 600; }
+.dir-out { color: var(--blue); font-weight: 600; }
+.load-more-btn {
+  display: block; width: 100%; padding: 10px; border: 1px dashed var(--border);
+  border-radius: 6px; background: none; cursor: pointer; font-size: 13px;
+  color: var(--teal); margin-top: 12px; font-weight: 500;
+}
+.load-more-btn:hover { background: #faf8f5; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,58,73,.4); z-index: 300; display: none;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius); padding: 24px;
+  width: 480px; max-width: 90vw; box-shadow: var(--shadow-lg);
+}
+.modal h3 { margin-bottom: 12px; font-size: 16px; }
+.modal input[type="text"], .modal textarea {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 14px; margin-bottom: 12px; font-family: inherit;
+}
+.modal textarea { resize: vertical; min-height: 60px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ──── Lists View ──── */
+.list-card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center;
+  gap: 16px; cursor: pointer; transition: all .15s; border: 1px solid transparent;
+}
+.list-card:hover { border-color: var(--teal); box-shadow: var(--shadow-md); }
+.list-icon {
+  width: 44px; height: 44px; border-radius: 10px; background: var(--teal);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.list-info { flex: 1; min-width: 0; }
+.list-info h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.list-info p { font-size: 12px; color: var(--text2); }
+.list-count {
+  font-size: 20px; font-weight: 700; color: var(--teal); margin-right: 8px;
+}
+.list-count-label { font-size: 11px; color: var(--text3); text-transform: uppercase; }
+.list-actions { display: flex; gap: 6px; }
+.list-actions button { padding: 6px 10px; }
+.list-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.list-header-bar h2 { font-size: 18px; font-weight: 700; }
+
+/* Filter summary pills */
+.filter-pill {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+  background: var(--cream); border: 1px solid var(--border); border-radius: 14px;
+  font-size: 11px; color: var(--text2); margin: 2px;
+}
+
+/* List Builder Modal */
+.modal-lg {
+  width: 720px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column;
+}
+.modal-lg .modal-body { flex: 1; overflow-y: auto; padding: 0; }
+.list-builder-section { padding: 16px 0; }
+.list-builder-section h4 {
+  font-size: 13px; font-weight: 700; color: var(--text2); text-transform: uppercase;
+  letter-spacing: .5px; margin-bottom: 10px;
+}
+.lb-row {
+  display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap;
+}
+.lb-row select, .lb-row input[type="text"] {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px; background: #fff;
+}
+.lb-row select { min-width: 160px; }
+.lb-row .lb-value { flex: 1; min-width: 160px; }
+.lb-row .lb-remove {
+  background: none; border: none; color: var(--text3); font-size: 18px; padding: 6px 8px; cursor: pointer;
+}
+.lb-row .lb-remove:hover { color: var(--red); }
+.lb-and-label {
+  font-size: 11px; font-weight: 700; color: var(--green); text-transform: uppercase;
+  margin: 2px 0 6px 4px;
+}
+.lb-tags {
+  display: flex; flex-wrap: wrap; gap: 4px; align-items: center; flex: 1; min-width: 160px;
+  padding: 4px 8px; border: 1px solid var(--border); border-radius: 5px; background: #fff; min-height: 34px;
+}
+.lb-tag {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px;
+  background: var(--green-light); border-radius: 10px; font-size: 12px; color: #3d6b1a;
+}
+.lb-tag button {
+  background: none; border: none; font-size: 14px; color: #7cb342; cursor: pointer; padding: 0 2px;
+}
+.lb-tag button:hover { color: var(--red); }
+.lb-tag-input {
+  border: none; outline: none; font-size: 13px; min-width: 80px; flex: 1; padding: 4px 0;
+}
+.lb-preview {
+  background: var(--cream); border-radius: 6px; padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px; margin-top: 12px;
+}
+.lb-preview-count { font-size: 24px; font-weight: 700; color: var(--teal); }
+.lb-preview-label { font-size: 13px; color: var(--text2); }
+
+/* Sales Dashboard */
+.sales-dashboard {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--surface); border-radius: var(--radius); padding: 16px;
+  box-shadow: var(--shadow-sm); text-align: center;
+}
+.stat-card .stat-value { font-size: 22px; font-weight: 700; color: var(--teal); }
+.stat-card .stat-label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+.credit-hold-badge { display: inline-block; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+.credit-ok-badge { display: inline-block; background: var(--green); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+.hs-linked-badge { display: inline-block; background: #f77c2a; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 4px; }
+
+/* Sales Detail */
+.sales-detail-header {
+  display: flex; align-items: flex-start; gap: 20px; margin-bottom: 0;
+  background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+.sales-detail-header h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px 0; }
+.sales-detail-header .meta { font-size: 13px; color: var(--text2); }
+.sales-detail-tabs {
+  display: flex; gap: 0; background: var(--surface); padding: 0 24px;
+  border-bottom: 2px solid var(--border); box-shadow: var(--shadow-sm);
+  border-radius: 0 0 var(--radius) var(--radius); margin-bottom: 16px;
+}
+.sd-tab {
+  padding: 12px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -2px; color: var(--text2);
+  transition: all .15s;
+}
+.sd-tab:hover { color: var(--text); }
+.sd-tab.active { color: var(--teal); border-bottom-color: var(--green); }
+.sd-tab-content { display: none; }
+.sd-tab-content.active { display: block; }
+.sales-detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;
+}
+@media (max-width: 800px) { .sales-detail-grid { grid-template-columns: 1fr; } }
+.sales-panel {
+  background: var(--surface); border-radius: var(--radius); padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.sales-panel-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.sd-filter-bar {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.sd-filter-bar select {
+  padding: 5px 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: #fff; color: var(--text); cursor: pointer;
+}
+.sales-panel th.sortable { cursor: pointer; user-select: none; }
+.sales-panel th.sortable:hover { color: var(--teal); }
+.sales-panel th .sort-arrow { font-size: 10px; margin-left: 3px; opacity: .4; }
+.sales-panel th.sorted .sort-arrow { opacity: 1; color: var(--teal); }
+.sales-panel h3 { font-size: 14px; font-weight: 700; color: var(--teal); margin: 0; text-transform: uppercase; letter-spacing: .5px; }
+.sales-panel table { width: 100%; border-collapse: collapse; }
+.sales-panel td, .sales-panel th { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid var(--border); }
+.sales-panel th { text-align: left; font-weight: 600; color: var(--text2); font-size: 11px; text-transform: uppercase; background: var(--cream); }
+.sales-panel tbody tr:hover { background: rgba(0,58,73,.03); }
+.contact-card {
+  display: flex; justify-content: space-between; padding: 10px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px; transition: background .1s;
+}
+.contact-card:hover { background: rgba(0,58,73,.02); margin: 0 -8px; padding: 10px 8px; border-radius: 4px; }
+.contact-card:last-child { border-bottom: none; }
+.contact-card .cc-name { font-weight: 600; }
+.contact-card .cc-title { color: var(--text2); font-size: 12px; }
+.contact-card .cc-contact { color: var(--text2); font-size: 12px; text-align: right; }
+/* Form modal fields */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--text2); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; background: #fff; box-sizing: border-box;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,58,73,.1);
+}
+
+/* Admin */
+.admin-layout { display: flex; gap: 0; min-height: calc(100vh - 120px); }
+.admin-sidebar {
+  width: 220px; flex-shrink: 0; background: var(--surface); border-radius: var(--radius) 0 0 var(--radius);
+  box-shadow: var(--shadow-sm); padding: 12px 0; position: sticky; top: 96px; align-self: flex-start;
+}
+.admin-sidebar a {
+  display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 13px;
+  font-weight: 500; color: var(--text2); border-left: 3px solid transparent; transition: all .12s;
+}
+.admin-sidebar a:hover { background: var(--cream); color: var(--text); text-decoration: none; }
+.admin-sidebar a.active { background: rgba(0,58,73,.05); color: var(--teal); border-left-color: var(--green); font-weight: 600; }
+.admin-sidebar .sidebar-section {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--text3); padding: 16px 20px 6px; margin-top: 4px;
+}
+.admin-main {
+  flex: 1; min-width: 0; padding: 0 0 0 20px;
+}
+.admin-panel {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  padding: 20px 24px; margin-bottom: 16px;
+}
+.admin-panel h2 { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+.admin-panel .panel-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+.admin-panel table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-panel th {
+  text-align: left; font-weight: 600; color: var(--text2); font-size: 11px;
+  text-transform: uppercase; background: var(--cream); padding: 8px 10px; border-bottom: 1px solid var(--border);
+}
+.admin-panel td { padding: 8px 10px; border-bottom: 1px solid #f0ede8; }
+.admin-panel tbody tr:hover { background: #faf8f5; }
+.admin-toolbar {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;
+}
+.admin-toolbar select, .admin-toolbar input[type="text"] {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px; background: #fff;
+}
+.inline-edit {
+  padding: 4px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 13px;
+  background: transparent; width: 100%; box-sizing: border-box;
+}
+.inline-edit:focus { border-color: var(--teal); background: #fff; outline: none; box-shadow: 0 0 0 2px rgba(0,58,73,.1); }
+.admin-stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;
+}
+.admin-stat {
+  background: var(--cream); border-radius: 6px; padding: 14px 16px; text-align: center;
+}
+.admin-stat .as-val { font-size: 20px; font-weight: 700; color: var(--teal); }
+.admin-stat .as-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+.role-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.role-admin { background: #fde8e8; color: #c0392b; }
+.role-sales_rep { background: #dbeafe; color: #1d4ed8; }
+.role-viewer { background: #e8f5d8; color: #3d6b1a; }
+.audit-detail { font-size: 12px; color: var(--text2); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dup-group {
+  background: var(--cream); border-radius: 6px; padding: 12px 16px; margin-bottom: 10px;
+}
+.dup-group h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.import-zone {
+  border: 2px dashed var(--border); border-radius: var(--radius); padding: 32px;
+  text-align: center; color: var(--text2); cursor: pointer; transition: all .15s;
+}
+.import-zone:hover { border-color: var(--teal); background: rgba(0,58,73,.02); }
+.import-zone input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <img src="/logo.png" alt="DevIQ">
+  </div>
+  <nav>
+    <a href="#" class="active" data-tab="contacts">Contacts</a>
+    <a href="#" data-tab="companies">Companies</a>
+    <a href="#" data-tab="lists">Lists</a>
+    <a href="#" data-tab="sales">Ad Sales</a>
+  </nav>
+  <div class="header-right">
+    <div class="user-menu">
+      <button class="user-menu-btn" onclick="toggleUserMenu(event)">
+        <span class="user-avatar">A</span>
+      </button>
+      <div class="user-dropdown" id="userDropdown">
+        <div class="dropdown-header">
+          <strong>Administrator</strong>
+          admin
+        </div>
+        <a href="#" onclick="switchAdminPanel('adminSettings');showTab('admin');toggleUserMenu(event);return false;">&#9881; Settings</a>
+        <a href="#" onclick="switchAdminPanel('adminUsers');showTab('admin');toggleUserMenu(event);return false;">&#128101; Manage Users</a>
+        <div class="dropdown-divider"></div>
+        <a href="#" class="danger" onclick="return false;">&#9193; Log Out</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- LIST VIEWS -->
+  <div id="listView">
+    <!-- Contacts -->
+    <div id="contactsView">
+      <div class="filter-bar">
+        <div class="filter-bar-top">
+          <div class="search-wrap">
+            <input class="search-input" id="contactSearch" placeholder="Search by name, email, company, city, title..." />
+            <button class="search-clear" onclick="document.getElementById('contactSearch').value='';document.getElementById('contactSearch').dispatchEvent(new Event('input'));">&times;</button>
+          </div>
+          <button class="btn" id="toggleFiltersBtn" onclick="toggleAdvancedFilters()">&#9776; Filters</button>
+          <div class="col-picker-wrap">
+            <button class="btn" onclick="toggleColPicker('contacts')">&#9783; Columns</button>
+            <div class="col-picker-dropdown" id="contactColPicker">
+              <input class="col-picker-search" placeholder="Search fields..." oninput="filterColPicker('contacts',this.value)" />
+              <div class="col-picker-list" id="contactColList"></div>
+            </div>
+          </div>
+          <select class="btn" id="perPageSelect" style="appearance:auto;">
+            <option value="50">50 rows</option>
+            <option value="100">100 rows</option>
+            <option value="200">200 rows</option>
+          </select>
+          <button class="btn btn-green" onclick="exportCSV('contacts')">&#8615; Export CSV</button>
+        </div>
+        <div class="advanced-filters" id="advancedFilters" style="display:none;">
+          <div id="filterRows"></div>
+          <div class="filter-actions">
+            <button class="btn btn-sm" onclick="addFilterRow()">+ Add Filter</button>
+            <button class="btn btn-sm btn-primary" onclick="applyFilters()">Apply Filters</button>
+            <button class="btn btn-sm" onclick="clearFilters()">Clear All</button>
+            <button class="btn btn-sm" onclick="openSaveFilterModal()">Save Filter</button>
+          </div>
+          <div class="saved-filters-bar" id="savedFiltersBar"></div>
+        </div>
+      </div>
+      <div class="result-count" id="contactsResultCount"></div>
+      <div class="table-wrap">
+        <table>
+          <thead id="contactsHead">
+            <tr></tr>
+          </thead>
+          <tbody id="contactsBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="contactsPagination"></div>
+    </div>
+
+    <!-- Companies -->
+    <div id="companiesView" style="display:none;">
+      <div class="filter-bar">
+        <div class="filter-bar-top">
+          <div class="search-wrap">
+            <input class="search-input" id="companySearch" placeholder="Search companies by name or domain..." />
+            <button class="search-clear" onclick="document.getElementById('companySearch').value='';document.getElementById('companySearch').dispatchEvent(new Event('input'));">&times;</button>
+          </div>
+          <div class="col-picker-wrap">
+            <button class="btn" onclick="toggleColPicker('companies')">&#9783; Columns</button>
+            <div class="col-picker-dropdown" id="companyColPicker">
+              <input class="col-picker-search" placeholder="Search fields..." oninput="filterColPicker('companies',this.value)" />
+              <div class="col-picker-list" id="companyColList"></div>
+            </div>
+          </div>
+          <button class="btn btn-green" onclick="exportCSV('companies')">&#8615; Export CSV</button>
+        </div>
+      </div>
+      <div class="result-count" id="companiesResultCount"></div>
+      <div class="table-wrap">
+        <table>
+          <thead id="companiesHead">
+            <tr></tr>
+          </thead>
+          <tbody id="companiesBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="companiesPagination"></div>
+    </div>
+
+    <!-- Lists -->
+    <div id="listsView" style="display:none;">
+      <div class="list-header-bar">
+        <h2>Marketing Lists</h2>
+        <button class="btn btn-green" onclick="openListBuilder()">+ New List</button>
+      </div>
+      <div id="listsContainer"></div>
+    </div>
+
+    <!-- List Detail (viewing contacts in a list) -->
+    <div id="listDetailView" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <button class="detail-back" onclick="closeListDetail()">&#8592; Back to Lists</button>
+        <div style="flex:1;">
+          <h2 id="listDetailName" style="font-size:18px;"></h2>
+          <p id="listDetailDesc" style="font-size:13px;color:var(--text2);margin-top:2px;"></p>
+        </div>
+        <div id="listDetailFilters" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+        <button class="btn btn-green" id="listExportBtn">&#8615; Export CSV</button>
+      </div>
+      <div class="result-count" id="listDetailResultCount"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Company</th><th>Title</th>
+              <th>City</th><th>State</th><th>Owner</th><th>Acts</th><th>Last Activity</th>
+            </tr>
+          </thead>
+          <tbody id="listDetailBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="listDetailPagination"></div>
+    </div>
+  </div>
+
+    <!-- Sales: Accounts List -->
+    <div id="salesView" style="display:none;">
+      <div class="sales-dashboard" id="salesDashboard"></div>
+      <div class="filter-bar">
+        <div class="filter-bar-top">
+          <div class="search-wrap">
+            <input class="search-input" id="salesSearch" placeholder="Search accounts..." />
+            <button class="search-clear" onclick="document.getElementById('salesSearch').value='';document.getElementById('salesSearch').dispatchEvent(new Event('input'));">&times;</button>
+          </div>
+          <select id="salesRepFilter" class="btn" style="min-width:100px;"><option value="">All Reps</option></select>
+          <select id="salesPubFilter" class="btn" style="min-width:140px;"><option value="">All Publications</option></select>
+          <select id="salesSort" class="btn" style="min-width:130px;">
+            <option value="company:asc">Name A–Z</option>
+            <option value="company:desc">Name Z–A</option>
+            <option value="revenue:desc">Revenue High–Low</option>
+            <option value="insertions:desc">Insertions High–Low</option>
+            <option value="last_issue:desc">Recent Activity</option>
+          </select>
+        </div>
+      </div>
+      <div id="salesResultCount" class="result-count"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Account</th><th>Contacts</th><th>Contracts</th>
+              <th>Insertions</th><th>Revenue</th><th>Last Issue</th><th>Credit</th>
+            </tr>
+          </thead>
+          <tbody id="salesBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="salesPagination"></div>
+    </div>
+
+    <!-- Sales: Account Detail -->
+    <div id="salesDetailView" style="display:none;">
+      <button class="detail-back" onclick="closeSalesDetail()">&#8592; Back to Accounts</button>
+      <div id="salesDetailContent"></div>
+    </div>
+
+    <!-- Admin -->
+    <div id="adminView" style="display:none;">
+      <div class="admin-layout">
+        <div class="admin-sidebar">
+          <div class="sidebar-section">Reference Data</div>
+          <a href="#" class="active" onclick="switchAdminPanel(this,'adminLookups')">Lookup Tables</a>
+          <a href="#" onclick="switchAdminPanel(this,'adminIssueCalendar')">Issue Calendar</a>
+          <a href="#" onclick="switchAdminPanel(this,'adminRateCards')">Rate Cards</a>
+          <div class="sidebar-section">Sales</div>
+          <a href="#" onclick="switchAdminPanel(this,'adminTargets')">Sales Targets</a>
+          <div class="sidebar-section">System</div>
+          <a href="#" onclick="switchAdminPanel(this,'adminUsers')">Users</a>
+          <a href="#" onclick="switchAdminPanel(this,'adminImportExport')">Import / Export</a>
+          <a href="#" onclick="switchAdminPanel(this,'adminAuditLog')">Audit Log</a>
+          <a href="#" onclick="switchAdminPanel(this,'adminHygiene')">Data Hygiene</a>
+          <a href="#" onclick="switchAdminPanel(this,'adminSettings')">Settings</a>
+          <a href="#" onclick="switchAdminPanel(this,'adminBackup')">Database</a>
+        </div>
+        <div class="admin-main">
+          <!-- Lookup Tables -->
+          <div class="admin-panel-content active" id="adminLookups">
+            <div class="admin-panel">
+              <h2>Lookup Tables</h2>
+              <p class="panel-desc">Manage reference data used in ad sales forms — publications, ad types, sizes, colors, reps, and categories.</p>
+              <div class="admin-toolbar">
+                <select id="adminLookupSelect" onchange="loadAdminLookup(this.value)">
+                  <option value="publications">Publications</option>
+                  <option value="ad_types">Ad Types</option>
+                  <option value="ad_sizes">Ad Sizes</option>
+                  <option value="ad_colors">Ad Colors</option>
+                  <option value="reps">Reps</option>
+                  <option value="categories">Product Categories</option>
+                  <option value="prod_statuses">Production Statuses</option>
+                </select>
+                <button class="btn btn-sm btn-green" onclick="addLookupRow()">+ Add Row</button>
+              </div>
+              <div id="adminLookupTable"></div>
+            </div>
+          </div>
+
+          <!-- Issue Calendar -->
+          <div class="admin-panel-content" id="adminIssueCalendar" style="display:none;">
+            <div class="admin-panel">
+              <h2>Issue Calendar</h2>
+              <p class="panel-desc">Manage issue dates per publication. Bulk-create dates for upcoming years.</p>
+              <div class="admin-toolbar">
+                <select id="adminIssuePub" onchange="loadAdminIssueDates()">
+                  <option value="">All Publications</option>
+                </select>
+                <button class="btn btn-sm btn-green" onclick="openBulkIssueModal()">+ Bulk Create</button>
+                <button class="btn btn-sm" onclick="openAddIssueModal()">+ Add Date</button>
+              </div>
+              <div id="adminIssueDatesTable"></div>
+            </div>
+          </div>
+
+          <!-- Rate Cards -->
+          <div class="admin-panel-content" id="adminRateCards" style="display:none;">
+            <div class="admin-panel">
+              <h2>Rate Cards</h2>
+              <p class="panel-desc">View and edit rate card pricing. Clone existing rate cards with price adjustments for new fiscal years.</p>
+              <div class="admin-toolbar">
+                <select id="adminRcPub" onchange="loadAdminRateCards()">
+                  <option value="">Select Publication...</option>
+                </select>
+                <select id="adminRcNum" onchange="loadAdminRateCards()">
+                  <option value="">All Rate Cards</option>
+                </select>
+                <button class="btn btn-sm btn-green" onclick="openCloneRcModal()">Clone Rate Card</button>
+                <button class="btn btn-sm" onclick="openAddRcModal()">+ Add Entry</button>
+              </div>
+              <div id="adminRateCardsTable"></div>
+            </div>
+          </div>
+
+          <!-- Sales Targets -->
+          <div class="admin-panel-content" id="adminTargets" style="display:none;">
+            <div class="admin-panel">
+              <h2>Sales Targets</h2>
+              <p class="panel-desc">Set revenue goals per rep and publication by year to track performance against targets.</p>
+              <div class="admin-toolbar">
+                <select id="adminTargetYear" onchange="loadAdminTargets()">
+                  <option value="">All Years</option>
+                </select>
+                <button class="btn btn-sm btn-green" onclick="openAddTargetModal()">+ Add Target</button>
+              </div>
+              <div id="adminTargetsTable"></div>
+            </div>
+          </div>
+
+          <!-- Users -->
+          <div class="admin-panel-content" id="adminUsers" style="display:none;">
+            <div class="admin-panel">
+              <h2>User Management</h2>
+              <p class="panel-desc">Create and manage users with role-based access: Admin, Sales Rep, or Viewer.</p>
+              <div class="admin-toolbar">
+                <button class="btn btn-sm btn-green" onclick="openAddUserModal()">+ Add User</button>
+              </div>
+              <div id="adminUsersTable"></div>
+            </div>
+          </div>
+
+          <!-- Import/Export -->
+          <div class="admin-panel-content" id="adminImportExport" style="display:none;">
+            <div class="admin-panel">
+              <h2>Import / Export</h2>
+              <p class="panel-desc">Export data tables as CSV or import CSV files into the system.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div>
+                  <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--teal);">EXPORT</h3>
+                  <div style="display:flex;flex-direction:column;gap:6px;" id="adminExportBtns"></div>
+                </div>
+                <div>
+                  <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--teal);">IMPORT</h3>
+                  <div class="admin-toolbar" style="margin-bottom:8px;">
+                    <select id="adminImportTarget">
+                      <option value="sales_accounts">Sales Accounts</option>
+                      <option value="sales_contracts">Sales Contracts</option>
+                      <option value="sales_insertions">Sales Insertions</option>
+                      <option value="sales_contacts">Sales Contacts</option>
+                      <option value="rate_cards">Rate Cards</option>
+                      <option value="issue_dates">Issue Dates</option>
+                      <option value="reps">Reps</option>
+                      <option value="publications">Publications</option>
+                      <option value="categories">Categories</option>
+                    </select>
+                  </div>
+                  <div class="import-zone" onclick="document.getElementById('adminImportFile').click()">
+                    <input type="file" id="adminImportFile" accept=".csv" onchange="doAdminImport()" />
+                    <div style="font-size:24px;margin-bottom:8px;opacity:.4;">&#8613;</div>
+                    <div>Click to select a CSV file</div>
+                    <div style="font-size:12px;margin-top:4px;">Column headers must match the export format</div>
+                  </div>
+                  <div id="adminImportResult" style="margin-top:8px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audit Log -->
+          <div class="admin-panel-content" id="adminAuditLog" style="display:none;">
+            <div class="admin-panel">
+              <h2>Audit Log</h2>
+              <p class="panel-desc">Track all changes made through the admin panel.</p>
+              <div class="admin-toolbar">
+                <select id="adminAuditType" onchange="loadAdminAudit()">
+                  <option value="">All Types</option>
+                </select>
+                <select id="adminAuditAction" onchange="loadAdminAudit()">
+                  <option value="">All Actions</option>
+                  <option value="create">Create</option>
+                  <option value="update">Update</option>
+                  <option value="delete">Delete</option>
+                  <option value="import">Import</option>
+                  <option value="backup">Backup</option>
+                </select>
+              </div>
+              <div id="adminAuditTable"></div>
+              <div class="pagination" id="adminAuditPagination"></div>
+            </div>
+          </div>
+
+          <!-- Data Hygiene -->
+          <div class="admin-panel-content" id="adminHygiene" style="display:none;">
+            <div class="admin-panel">
+              <h2>Data Hygiene</h2>
+              <p class="panel-desc">Find duplicate records across accounts and contacts.</p>
+              <div class="admin-toolbar">
+                <select id="adminDupEntity" onchange="loadAdminDuplicates()">
+                  <option value="accounts">Sales Accounts</option>
+                  <option value="contacts">HubSpot Contacts (by email)</option>
+                  <option value="sm_contacts">Sales Contacts (by email)</option>
+                </select>
+              </div>
+              <div id="adminDuplicatesTable"></div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="admin-panel-content" id="adminSettings" style="display:none;">
+            <div class="admin-panel">
+              <h2>System Settings</h2>
+              <p class="panel-desc">Configure global application settings.</p>
+              <div class="form-grid" id="adminSettingsForm">
+                <div class="form-group"><label>App Name</label><input id="settingAppName" value="DevIQ" /></div>
+                <div class="form-group"><label>Default Rep</label><input id="settingDefaultRep" /></div>
+                <div class="form-group"><label>Company Name</label><input id="settingCompanyName" value="ASLA" /></div>
+                <div class="form-group"><label>Fiscal Year Start Month</label>
+                  <select id="settingFYStart">
+                    <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                    <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                    <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                    <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                  </select>
+                </div>
+                <div class="form-group full"><label>Notes</label><textarea id="settingNotes" rows="3" style="resize:vertical;"></textarea></div>
+              </div>
+              <div style="margin-top:16px;">
+                <button class="btn btn-primary" onclick="saveAdminSettings()">Save Settings</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Database -->
+          <div class="admin-panel-content" id="adminBackup" style="display:none;">
+            <div class="admin-panel">
+              <h2>Database</h2>
+              <p class="panel-desc">View database statistics and create backups.</p>
+              <div class="admin-stat-grid" id="adminDbStats"></div>
+              <button class="btn btn-green" onclick="downloadBackup()">Download Database Backup</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- DETAIL PAGE -->
+  <div id="detailPage" class="detail-page">
+    <button class="detail-back" onclick="closeDetail()">&#8592; Back to list</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- Save Filter Modal (simple) -->
+<div class="modal-overlay" id="salesRecordModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal modal-lg">
+    <h3>Detail</h3>
+    <div class="modal-body" style="padding:16px;"></div>
+    <div class="modal-actions" style="padding-top:12px;">
+      <button class="btn" onclick="document.getElementById('salesRecordModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addActivityModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3>Add Activity</h3>
+    <div class="modal-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <input type="hidden" id="actModalContactId" />
+      <input type="hidden" id="actModalCompanyId" />
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Type</label>
+        <select id="actModalType" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;">
+          <option value="notes">Note</option>
+          <option value="calls">Call</option>
+          <option value="meetings">Meeting</option>
+          <option value="tasks">Task</option>
+          <option value="emails">Email</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Subject</label>
+        <input type="text" id="actModalSubject" placeholder="Subject..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Details</label>
+        <textarea id="actModalBody" placeholder="Details..." rows="4" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('addActivityModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitActivity()">Save Activity</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="contractModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal modal-lg">
+    <h3 id="contractModalTitle">New Contract</h3>
+    <div class="modal-body" style="padding:16px;">
+      <input type="hidden" id="ctModalId" />
+      <input type="hidden" id="ctModalAccount" />
+      <div class="form-grid">
+        <div class="form-group"><label>Publication</label><select id="ctPub" onchange="onCtPubChange()"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Ad Type</label><select id="ctType"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Rate Card</label><select id="ctRateCard"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Rate</label><input id="ctRate" type="number" step="1" /></div>
+        <div class="form-group"><label>Contract Start</label><input id="ctStart" type="date" /></div>
+        <div class="form-group"><label>Contract End</label><input id="ctEnd" type="date" /></div>
+        <div class="form-group"><label>Status</label><select id="ctStatus"><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option><option value="Canceled">Canceled</option></select></div>
+        <div class="form-group"><label>Terms</label><input id="ctTerms" /></div>
+        <div class="form-group"><label>Agency</label><input id="ctAgency" /></div>
+        <div class="form-group"><label>Agency Discount (%)</label><input id="ctDiscount" type="number" step="1" min="0" max="100" /></div>
+        <div class="form-group"><label>Bill To</label><input id="ctBill" /></div>
+        <div class="form-group"><label>Credit Hold</label><select id="ctCreditHold"><option value="0">No</option><option value="1">Yes</option></select></div>
+        <div class="form-group"><label>Rep 1</label><select id="ctRep1" onchange="autoFillTerritory('ctRep1','ctTerritory1')"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Territory 1</label><input id="ctTerritory1" readonly /></div>
+        <div class="form-group"><label>Rep 2</label><select id="ctRep2" onchange="autoFillTerritory('ctRep2','ctTerritory2')"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Territory 2</label><input id="ctTerritory2" readonly /></div>
+        <div class="form-group full"><label>Notes</label><textarea id="ctNotes" rows="3" style="resize:vertical;"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="ctDeleteBtn" style="margin-right:auto;display:none;" onclick="deleteContract()">Delete</button>
+      <button class="btn" onclick="document.getElementById('contractModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContract()">Save Contract</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="insertionModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal modal-lg">
+    <h3 id="insertionModalTitle">New Insertion</h3>
+    <div class="modal-body" style="padding:16px;">
+      <input type="hidden" id="insModalId" />
+      <input type="hidden" id="insModalAccount" />
+      <div class="form-grid">
+        <div class="form-group"><label>Publication</label><select id="insPub" onchange="onInsPubChange()"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Issue Date</label><select id="insIssueDate"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Ad Type</label><select id="insType"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Ad Size</label><select id="insSize" onchange="lookupAdCost()"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Color</label><select id="insColor" onchange="lookupAdCost()"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Category</label><select id="insCategory"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Ad Cost ($)</label><input id="insCost" type="number" step="0.01" /></div>
+        <div class="form-group"><label>Net Cost ($)</label><input id="insNet" type="number" step="0.01" /></div>
+        <div class="form-group"><label>Gross Cost ($)</label><input id="insGross" type="number" step="0.01" /></div>
+        <div class="form-group"><label>Contract #</label><input id="insContract" /></div>
+        <div class="form-group"><label>Rep 1</label><select id="insRep1" onchange="autoFillTerritory('insRep1','insTerritory1')"><option value="">Select...</option></select></div>
+        <div class="form-group"><label>Territory 1</label><input id="insTerritory1" readonly /></div>
+        <div class="form-group full"><label>Headline</label><input id="insHeadline" /></div>
+        <div class="form-group"><label>Position Request</label><input id="insPosition" /></div>
+        <div class="form-group"><label>Placement</label><input id="insPlacement" /></div>
+        <div class="form-group"><label>URL</label><input id="insUrl" /></div>
+        <div class="form-group"><label>Status</label><select id="insStatus"><option value="open">Open</option><option value="closed">Closed</option><option value="canceled">Canceled</option></select></div>
+        <div class="form-group full"><label>Comments</label><textarea id="insComments" rows="2" style="resize:vertical;"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="insDeleteBtn" style="margin-right:auto;display:none;" onclick="deleteInsertion()">Delete</button>
+      <button class="btn" onclick="document.getElementById('insertionModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInsertion()">Save Insertion</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Modals -->
+<div class="modal-overlay" id="adminUserModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3 id="adminUserModalTitle">Add User</h3>
+    <input type="hidden" id="adminUserId" />
+    <div class="form-grid">
+      <div class="form-group"><label>Username</label><input id="adminUserUsername" /></div>
+      <div class="form-group"><label>Display Name</label><input id="adminUserName" /></div>
+      <div class="form-group"><label>Email</label><input id="adminUserEmail" type="email" /></div>
+      <div class="form-group"><label>Role</label>
+        <select id="adminUserRole"><option value="viewer">Viewer</option><option value="sales_rep">Sales Rep</option><option value="admin">Admin</option></select>
+      </div>
+      <div class="form-group"><label>Password</label><input id="adminUserPassword" type="password" /></div>
+      <div class="form-group"><label>Active</label>
+        <select id="adminUserActive"><option value="1">Yes</option><option value="0">No</option></select>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('adminUserModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdminUser()">Save User</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminIssueModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3 id="adminIssueModalTitle">Add Issue Date</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Publication</label><select id="adminIssuePubSelect"><option value="">Select...</option></select></div>
+      <div class="form-group"><label>Cover Date (MM/DD/YY)</label><input id="adminIssueCover" placeholder="12/01/26" /></div>
+      <div class="form-group"><label>Closing Date (MM/DD/YY)</label><input id="adminIssueClosing" placeholder="10/15/26" /></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('adminIssueModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdminIssueDate()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminBulkIssueModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3>Bulk Create Issue Dates</h3>
+    <p class="panel-desc">Generate monthly issue dates for a publication and year.</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Publication</label><select id="bulkIssuePub"><option value="">Select...</option></select></div>
+      <div class="form-group"><label>Year (YY)</label><input id="bulkIssueYear" placeholder="27" maxlength="2" /></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('adminBulkIssueModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="doBulkCreateIssues()">Create 12 Monthly Dates</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminRcModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3>Add Rate Card Entry</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Publication</label><select id="adminRcPubSelect"><option value="">Select...</option></select></div>
+      <div class="form-group"><label>Rate Card #</label><input id="adminRcNumInput" /></div>
+      <div class="form-group"><label>Ad Size</label><input id="adminRcSize" /></div>
+      <div class="form-group"><label>Ad Type</label><input id="adminRcType" /></div>
+      <div class="form-group"><label>Color</label><input id="adminRcColor" /></div>
+      <div class="form-group"><label>Rate</label><input id="adminRcRate" type="number" /></div>
+      <div class="form-group"><label>Ad Cost ($)</label><input id="adminRcCost" type="number" step="0.01" /></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('adminRcModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdminRateCard()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminCloneRcModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3>Clone Rate Card</h3>
+    <p class="panel-desc">Copy all entries from an existing rate card with an optional price adjustment.</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Source Publication</label><select id="cloneRcPub"><option value="">Select...</option></select></div>
+      <div class="form-group"><label>Source Rate Card</label><select id="cloneRcSource"><option value="">Select...</option></select></div>
+      <div class="form-group"><label>New Rate Card #</label><input id="cloneRcNew" placeholder="e.g. LAMPD27d" /></div>
+      <div class="form-group"><label>Price Adjustment %</label><input id="cloneRcPct" type="number" value="0" step="0.5" /></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('adminCloneRcModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="doCloneRateCard()">Clone</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminTargetModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3 id="adminTargetModalTitle">Add Sales Target</h3>
+    <input type="hidden" id="adminTargetId" />
+    <div class="form-grid">
+      <div class="form-group"><label>Year</label><input id="adminTargetYear2" placeholder="2027" /></div>
+      <div class="form-group"><label>Rep</label><select id="adminTargetRep"><option value="">All Reps</option></select></div>
+      <div class="form-group"><label>Publication</label><select id="adminTargetPub"><option value="">All Publications</option></select></div>
+      <div class="form-group"><label>Target Amount ($)</label><input id="adminTargetAmount" type="number" step="100" /></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('adminTargetModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdminTarget()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="saveFilterModal">
+  <div class="modal">
+    <h3>Save Filter</h3>
+    <input type="text" id="filterSaveName" placeholder="Filter name..." />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSaveFilterModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doSaveFilter()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- List Builder Modal -->
+<div class="modal-overlay" id="listBuilderModal">
+  <div class="modal modal-lg">
+    <h3 id="listBuilderTitle">Create Marketing List</h3>
+    <div class="modal-body">
+      <input type="text" id="lbName" placeholder="List name..." />
+      <textarea id="lbDesc" placeholder="Description (optional)..."></textarea>
+      <div class="list-builder-section">
+        <h4>Conditions <span style="font-weight:400;text-transform:none;color:var(--text3);">— contacts must match ALL of the following</span></h4>
+        <div id="lbRows"></div>
+        <button class="btn btn-sm" onclick="lbAddRow()" style="margin-top:4px;">+ Add Condition</button>
+      </div>
+      <div class="lb-preview">
+        <div class="lb-preview-count" id="lbPreviewCount">—</div>
+        <div class="lb-preview-label">contacts match these criteria</div>
+        <button class="btn btn-sm" onclick="lbRefreshPreview()" style="margin-left:auto;">Refresh Count</button>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn" onclick="closeListBuilder()">Cancel</button>
+      <button class="btn btn-primary" id="lbSaveBtn" onclick="lbSave()">Create List</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// STATE
+let state = {
+  contacts: { page: 1, sort: 'lastname', order: 'asc', search: '', per_page: 50 },
+  companies: { page: 1, search: '', per_page: 50 },
+  activeTab: 'contacts',
+  filters: [],
+  contactFields: [],
+  companyFields: [],
+  saveMode: 'filter',
+  listDetailId: null,
+  listDetailPage: 1,
+  editingListId: null,
+};
+
+const DEFAULT_CONTACT_COLS = ['lastname','email','company','jobtitle','city','state','owner_name','activity_count','last_activity'];
+const DEFAULT_COMPANY_COLS = ['name','domain','industry','city','state','phone','owner_name','contact_count'];
+
+const CONTACT_COL_LABELS = {
+  lastname:'Name', email:'Email', company:'Company', jobtitle:'Title',
+  city:'City', state:'State', owner_name:'Owner', activity_count:'Acts',
+  last_activity:'Last Activity', firstname:'First Name', phone:'Phone',
+  country:'Country', lifecyclestage:'Lifecycle', hs_lead_status:'Lead Status',
+  createdate:'Created', lastmodifieddate:'Modified'
+};
+const COMPANY_COL_LABELS = {
+  name:'Name', domain:'Domain', industry:'Industry', city:'City', state:'State',
+  phone:'Phone', owner_name:'Owner', contact_count:'Contacts', country:'Country'
+};
+
+function getContactCols() {
+  const saved = localStorage.getItem('devnex_contact_cols');
+  return saved ? JSON.parse(saved) : [...DEFAULT_CONTACT_COLS];
+}
+function setContactCols(cols) {
+  localStorage.setItem('devnex_contact_cols', JSON.stringify(cols));
+}
+function getCompanyCols() {
+  const saved = localStorage.getItem('devnex_company_cols');
+  return saved ? JSON.parse(saved) : [...DEFAULT_COMPANY_COLS];
+}
+function setCompanyCols(cols) {
+  localStorage.setItem('devnex_company_cols', JSON.stringify(cols));
+}
+
+// INIT
+async function init() {
+  loadStats();
+  await Promise.all([loadContactFields(), loadCompanyFields()]);
+  loadContacts();
+  loadSavedFilters();
+}
+
+// TABS
+document.querySelectorAll('.header nav a, .header-right a[data-tab]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.header nav a, .header-right a[data-tab]').forEach(t => t.classList.remove('active'));
+    a.classList.add('active');
+    state.activeTab = a.dataset.tab;
+    showTab(a.dataset.tab);
+  });
+});
+
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  document.getElementById('userDropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('userDropdown').classList.remove('open');
+});
+
+function showTab(tab) {
+  document.getElementById('contactsView').style.display = 'none';
+  document.getElementById('companiesView').style.display = 'none';
+  document.getElementById('listsView').style.display = 'none';
+  document.getElementById('listDetailView').style.display = 'none';
+  document.getElementById('salesView').style.display = 'none';
+  document.getElementById('salesDetailView').style.display = 'none';
+  document.getElementById('adminView').style.display = 'none';
+  document.getElementById('detailPage').classList.remove('active');
+  if (tab === 'admin') {
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('adminView').style.display = '';
+    initAdmin();
+    return;
+  }
+  document.getElementById('listView').style.display = '';
+  if (tab === 'contacts') {
+    document.getElementById('contactsView').style.display = '';
+  } else if (tab === 'companies') {
+    document.getElementById('companiesView').style.display = '';
+    loadCompanies();
+  } else if (tab === 'lists') {
+    document.getElementById('listsView').style.display = '';
+    loadLists();
+  } else if (tab === 'sales') {
+    document.getElementById('salesView').style.display = '';
+    initSales();
+  }
+}
+
+// STATS
+async function loadStats() {
+  const d = await (await fetch('/api/stats')).json();
+  document.getElementById('headerStats').innerHTML =
+    `<span>${d.contacts.toLocaleString()} Contacts</span>` +
+    `<span>${d.companies.toLocaleString()} Companies</span>` +
+    `<span>${d.activities.toLocaleString()} Activities</span>`;
+}
+
+// FIELD DISCOVERY
+async function loadContactFields() {
+  state.contactFields = await (await fetch('/api/fields/contacts')).json();
+}
+async function loadCompanyFields() {
+  state.companyFields = await (await fetch('/api/fields/companies')).json();
+}
+
+// ══════════════════════════════════════
+// COLUMN PICKER
+// ══════════════════════════════════════
+function toggleColPicker(type) {
+  const id = type === 'contacts' ? 'contactColPicker' : 'companyColPicker';
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('open');
+  document.querySelectorAll('.col-picker-dropdown').forEach(d => d.classList.remove('open'));
+  if (!isOpen) {
+    el.classList.add('open');
+    renderColPicker(type);
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.col-picker-wrap')) {
+    document.querySelectorAll('.col-picker-dropdown').forEach(d => d.classList.remove('open'));
+  }
+});
+
+function renderColPicker(type, filter = '') {
+  const fields = type === 'contacts' ? state.contactFields : state.companyFields;
+  const defaults = type === 'contacts' ? DEFAULT_CONTACT_COLS : DEFAULT_COMPANY_COLS;
+  const current = type === 'contacts' ? getContactCols() : getCompanyCols();
+  const labels = type === 'contacts' ? CONTACT_COL_LABELS : COMPANY_COL_LABELS;
+  const listId = type === 'contacts' ? 'contactColList' : 'companyColList';
+
+  const fixedCols = type === 'contacts' ? ['activity_count','last_activity'] : ['contact_count'];
+  const allOptions = [...new Set([...defaults, ...fields])].filter(f => !fixedCols.includes(f));
+
+  const q = filter.toLowerCase();
+  const filtered = q ? allOptions.filter(f => formatLabel(f).toLowerCase().includes(q) || f.includes(q)) : allOptions;
+
+  const sortedFiltered = filtered.sort((a, b) => {
+    const ai = defaults.indexOf(a), bi = defaults.indexOf(b);
+    if (ai >= 0 && bi >= 0) return ai - bi;
+    if (ai >= 0) return -1;
+    if (bi >= 0) return 1;
+    return formatLabel(a).localeCompare(formatLabel(b));
+  });
+
+  document.getElementById(listId).innerHTML = sortedFiltered.map(f => {
+    const checked = current.includes(f) || fixedCols.includes(f);
+    const isDefault = defaults.includes(f);
+    return `<label class="col-picker-item${isDefault ? ' default-col' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleCol('${type}','${f}',this.checked)" />
+      ${esc(labels[f] || formatLabel(f))}
+    </label>`;
+  }).join('');
+}
+
+function filterColPicker(type, val) { renderColPicker(type, val); }
+
+function toggleCol(type, field, on) {
+  let cols = type === 'contacts' ? getContactCols() : getCompanyCols();
+  if (on && !cols.includes(field)) {
+    const fixedEnd = type === 'contacts' ? ['activity_count','last_activity'] : ['contact_count'];
+    const insertIdx = cols.length - fixedEnd.filter(f => cols.includes(f)).length;
+    cols.splice(insertIdx, 0, field);
+  } else if (!on) {
+    cols = cols.filter(c => c !== field);
+  }
+  if (type === 'contacts') { setContactCols(cols); loadContacts(); }
+  else { setCompanyCols(cols); loadCompanies(); }
+}
+
+// ══════════════════════════════════════
+// ADVANCED FILTERS
+// ══════════════════════════════════════
+function toggleAdvancedFilters() {
+  const el = document.getElementById('advancedFilters');
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? '' : 'none';
+  if (isHidden && state.filters.length === 0) addFilterRow();
+}
+
+function addFilterRow() {
+  state.filters.push({ field: '', op: 'contains', value: '' });
+  renderFilterRows();
+}
+
+function removeFilterRow(i) {
+  state.filters.splice(i, 1);
+  renderFilterRows();
+}
+
+function renderFilterRows() {
+  const container = document.getElementById('filterRows');
+  container.innerHTML = state.filters.map((f, i) => `
+    <div class="filter-row">
+      <select onchange="state.filters[${i}].field=this.value">
+        <option value="">Select field...</option>
+        ${state.contactFields.map(field =>
+          `<option value="${field}" ${f.field === field ? 'selected' : ''}>${formatLabel(field)}</option>`
+        ).join('')}
+      </select>
+      <select onchange="state.filters[${i}].op=this.value">
+        <option value="contains" ${f.op==='contains'?'selected':''}>contains</option>
+        <option value="equals" ${f.op==='equals'?'selected':''}>equals</option>
+        <option value="not_equals" ${f.op==='not_equals'?'selected':''}>does not equal</option>
+        <option value="not_contains" ${f.op==='not_contains'?'selected':''}>does not contain</option>
+        <option value="starts_with" ${f.op==='starts_with'?'selected':''}>starts with</option>
+        <option value="is_not_empty" ${f.op==='is_not_empty'?'selected':''}>is not empty</option>
+        <option value="is_empty" ${f.op==='is_empty'?'selected':''}>is empty</option>
+      </select>
+      <input class="filter-value" value="${esc(f.value)}" placeholder="Value..."
+             oninput="state.filters[${i}].value=this.value"
+             onkeydown="if(event.key==='Enter')applyFilters()"
+             ${f.op==='is_empty'||f.op==='is_not_empty'?'disabled style="opacity:.4"':''} />
+      <button class="remove-filter" onclick="removeFilterRow(${i})">&times;</button>
+    </div>
+  `).join('');
+}
+
+function applyFilters() {
+  state.contacts.page = 1;
+  loadContacts();
+}
+
+function clearFilters() {
+  state.filters = [];
+  renderFilterRows();
+  state.contacts.page = 1;
+  loadContacts();
+}
+
+function getActiveFilters() {
+  return state.filters.filter(f => f.field && (f.op === 'is_empty' || f.op === 'is_not_empty' || f.value));
+}
+
+// ══════════════════════════════════════
+// SAVED FILTERS
+// ══════════════════════════════════════
+async function loadSavedFilters() {
+  const filters = await (await fetch('/api/saved-filters?target=contacts')).json();
+  const bar = document.getElementById('savedFiltersBar');
+  if (!filters.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = '<span style="font-size:12px;color:var(--text3);font-weight:600;">SAVED:</span> ' +
+    filters.map(f => `
+      <span class="saved-filter-chip" onclick="loadSavedFilter(${JSON.stringify(f.filters).replace(/"/g,'&quot;')})">
+        ${esc(f.name)}
+        <span class="delete-chip" onclick="event.stopPropagation();deleteSavedFilter(${f.id})">&times;</span>
+      </span>
+    `).join('');
+}
+
+function loadSavedFilter(filters) {
+  state.filters = JSON.parse(JSON.stringify(filters));
+  document.getElementById('advancedFilters').style.display = '';
+  renderFilterRows();
+  applyFilters();
+}
+
+async function deleteSavedFilter(id) {
+  await fetch(`/api/saved-filters/${id}`, { method: 'DELETE' });
+  loadSavedFilters();
+}
+
+// ══════════════════════════════════════
+// SAVE FILTER MODAL (simple, per-user)
+// ══════════════════════════════════════
+function openSaveFilterModal() {
+  document.getElementById('filterSaveName').value = '';
+  document.getElementById('saveFilterModal').classList.add('open');
+  document.getElementById('filterSaveName').focus();
+}
+function closeSaveFilterModal() {
+  document.getElementById('saveFilterModal').classList.remove('open');
+}
+async function doSaveFilter() {
+  const name = document.getElementById('filterSaveName').value.trim();
+  if (!name) return;
+  const active = getActiveFilters();
+  if (!active.length) { alert('Add at least one filter first.'); return; }
+  await fetch('/api/saved-filters', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, target: 'contacts', filters: active })
+  });
+  closeSaveFilterModal();
+  loadSavedFilters();
+}
+
+// ══════════════════════════════════════
+// LIST BUILDER
+// ══════════════════════════════════════
+let lbConditions = [];
+let lbEditingId = null;
+let lbPreviewTimeout = null;
+
+const LB_OPERATORS = [
+  { value: 'equals', label: 'equals' },
+  { value: 'not_equals', label: 'does not equal' },
+  { value: 'contains', label: 'contains' },
+  { value: 'not_contains', label: 'does not contain' },
+  { value: 'one_of', label: 'is one of' },
+  { value: 'not_one_of', label: 'is not one of' },
+  { value: 'starts_with', label: 'starts with' },
+  { value: 'is_not_empty', label: 'is not empty' },
+  { value: 'is_empty', label: 'is empty' },
+];
+
+function openListBuilder(editId, existingData) {
+  lbEditingId = editId || null;
+  lbConditions = [];
+  document.getElementById('lbName').value = '';
+  document.getElementById('lbDesc').value = '';
+  document.getElementById('lbPreviewCount').textContent = '—';
+
+  if (existingData) {
+    document.getElementById('listBuilderTitle').textContent = 'Edit Marketing List';
+    document.getElementById('lbSaveBtn').textContent = 'Update List';
+    document.getElementById('lbName').value = existingData.name || '';
+    document.getElementById('lbDesc').value = existingData.description || '';
+    lbConditions = (existingData.filters || []).map(f => ({
+      field: f.field || '',
+      op: f.op || 'contains',
+      value: f.op === 'one_of' || f.op === 'not_one_of'
+        ? (Array.isArray(f.value) ? [...f.value] : (f.value || '').split(',').map(v => v.trim()).filter(Boolean))
+        : f.value || '',
+      tags: f.op === 'one_of' || f.op === 'not_one_of'
+        ? (Array.isArray(f.value) ? [...f.value] : (f.value || '').split(',').map(v => v.trim()).filter(Boolean))
+        : []
+    }));
+  } else {
+    document.getElementById('listBuilderTitle').textContent = 'Create Marketing List';
+    document.getElementById('lbSaveBtn').textContent = 'Create List';
+  }
+
+  if (lbConditions.length === 0) lbConditions.push({ field: '', op: 'equals', value: '', tags: [] });
+  lbRenderRows();
+  document.getElementById('listBuilderModal').classList.add('open');
+  document.getElementById('lbName').focus();
+  lbRefreshPreview();
+}
+
+function closeListBuilder() {
+  document.getElementById('listBuilderModal').classList.remove('open');
+}
+
+function lbAddRow() {
+  lbConditions.push({ field: '', op: 'equals', value: '', tags: [] });
+  lbRenderRows();
+}
+
+function lbRemoveRow(i) {
+  lbConditions.splice(i, 1);
+  lbRenderRows();
+  lbSchedulePreview();
+}
+
+function lbIsMultiValue(op) { return op === 'one_of' || op === 'not_one_of'; }
+function lbIsNoValue(op) { return op === 'is_empty' || op === 'is_not_empty'; }
+
+function lbRenderRows() {
+  const container = document.getElementById('lbRows');
+  container.innerHTML = lbConditions.map((c, i) => {
+    const fieldOpts = state.contactFields.map(f =>
+      `<option value="${f}" ${c.field === f ? 'selected' : ''}>${formatLabel(f)}</option>`
+    ).join('');
+    const opOpts = LB_OPERATORS.map(o =>
+      `<option value="${o.value}" ${c.op === o.value ? 'selected' : ''}>${o.label}</option>`
+    ).join('');
+
+    let valueHtml;
+    if (lbIsNoValue(c.op)) {
+      valueHtml = '<span style="flex:1;font-size:13px;color:var(--text3);padding:8px;">(no value needed)</span>';
+    } else if (lbIsMultiValue(c.op)) {
+      const tagsHtml = (c.tags || []).map((t, ti) =>
+        `<span class="lb-tag">${esc(t)}<button onclick="lbRemoveTag(${i},${ti})">&times;</button></span>`
+      ).join('');
+      valueHtml = `<div class="lb-tags" onclick="this.querySelector('input')?.focus()">
+        ${tagsHtml}
+        <input class="lb-tag-input" placeholder="Type value, press Enter..."
+          onkeydown="lbTagKeydown(event,${i})" />
+      </div>`;
+    } else {
+      valueHtml = `<input type="text" class="lb-value" value="${esc(c.value)}" placeholder="Value..."
+        oninput="lbConditions[${i}].value=this.value;lbSchedulePreview()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();lbRefreshPreview()}" />`;
+    }
+
+    const andLabel = i > 0 ? '<div class="lb-and-label">AND</div>' : '';
+    return `${andLabel}<div class="lb-row">
+      <select onchange="lbFieldChange(${i},this.value)">
+        <option value="">Select field...</option>${fieldOpts}
+      </select>
+      <select onchange="lbOpChange(${i},this.value)">
+        ${opOpts}
+      </select>
+      ${valueHtml}
+      <button class="lb-remove" onclick="lbRemoveRow(${i})">&times;</button>
+    </div>`;
+  }).join('');
+}
+
+function lbFieldChange(i, val) {
+  lbConditions[i].field = val;
+  lbSchedulePreview();
+}
+function lbOpChange(i, val) {
+  const wasMulti = lbIsMultiValue(lbConditions[i].op);
+  const isMulti = lbIsMultiValue(val);
+  lbConditions[i].op = val;
+  if (isMulti && !wasMulti) {
+    lbConditions[i].tags = lbConditions[i].value ? [lbConditions[i].value] : [];
+    lbConditions[i].value = '';
+  } else if (!isMulti && wasMulti) {
+    lbConditions[i].value = (lbConditions[i].tags || []).join(', ');
+    lbConditions[i].tags = [];
+  }
+  lbRenderRows();
+  lbSchedulePreview();
+}
+
+function lbTagKeydown(e, i) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/,$/,'');
+    if (val && !(lbConditions[i].tags || []).includes(val)) {
+      lbConditions[i].tags = lbConditions[i].tags || [];
+      lbConditions[i].tags.push(val);
+      lbRenderRows();
+      lbSchedulePreview();
+    } else {
+      e.target.value = '';
+    }
+  } else if (e.key === 'Backspace' && !e.target.value && lbConditions[i].tags?.length) {
+    lbConditions[i].tags.pop();
+    lbRenderRows();
+    lbSchedulePreview();
+  }
+}
+function lbRemoveTag(i, ti) {
+  lbConditions[i].tags.splice(ti, 1);
+  lbRenderRows();
+  lbSchedulePreview();
+}
+
+function lbGetActiveConditions() {
+  return lbConditions.filter(c => {
+    if (!c.field) return false;
+    if (lbIsNoValue(c.op)) return true;
+    if (lbIsMultiValue(c.op)) return c.tags && c.tags.length > 0;
+    return !!c.value;
+  }).map(c => {
+    if (lbIsMultiValue(c.op)) {
+      return { field: c.field, op: c.op, value: c.tags };
+    }
+    return { field: c.field, op: c.op, value: c.value };
+  });
+}
+
+function lbSchedulePreview() {
+  clearTimeout(lbPreviewTimeout);
+  lbPreviewTimeout = setTimeout(lbRefreshPreview, 600);
+}
+
+async function lbRefreshPreview() {
+  const conditions = lbGetActiveConditions();
+  document.getElementById('lbPreviewCount').textContent = '...';
+  const res = await fetch('/api/lists/preview', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ filters: conditions })
+  });
+  const d = await res.json();
+  document.getElementById('lbPreviewCount').textContent = d.count.toLocaleString();
+}
+
+async function lbSave() {
+  const name = document.getElementById('lbName').value.trim();
+  if (!name) { alert('Enter a list name.'); return; }
+  const desc = document.getElementById('lbDesc').value.trim();
+  const conditions = lbGetActiveConditions();
+
+  if (lbEditingId) {
+    await fetch(`/api/lists/${lbEditingId}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, description: desc, filters: conditions })
+    });
+  } else {
+    await fetch('/api/lists', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, description: desc, target: 'contacts', filters: conditions })
+    });
+  }
+  closeListBuilder();
+  loadLists();
+}
+
+// ══════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════
+function exportCSV(type) {
+  const params = new URLSearchParams();
+  if (type === 'contacts') {
+    if (state.contacts.search) params.set('search', state.contacts.search);
+    const active = getActiveFilters();
+    if (active.length) params.set('filters', JSON.stringify(active));
+  } else {
+    if (state.companies.search) params.set('search', state.companies.search);
+  }
+  window.open(`/api/${type}/export?${params}`, '_blank');
+}
+
+// ══════════════════════════════════════
+// CONTACTS LIST
+// ══════════════════════════════════════
+async function loadContacts() {
+  const s = state.contacts;
+  const params = new URLSearchParams({
+    page: s.page, per_page: s.per_page, sort: s.sort, order: s.order, search: s.search
+  });
+  const active = getActiveFilters();
+  if (active.length) params.set('filters', JSON.stringify(active));
+
+  const cols = getContactCols();
+  const baseCols = ['id','firstname','lastname','email','phone','company','jobtitle',
+    'city','state','country','owner_name','lifecyclestage','hs_lead_status','createdate','lastmodifieddate'];
+  const extraFields = cols.filter(c => !baseCols.includes(c) && c !== 'activity_count' && c !== 'last_activity');
+  if (extraFields.length) params.set('extra_fields', extraFields.join(','));
+
+  const d = await (await fetch('/api/contacts?' + params)).json();
+  renderContacts(d);
+}
+
+function renderContactsHeader() {
+  const cols = getContactCols();
+  const labels = CONTACT_COL_LABELS;
+  const sortableCols = new Set(['firstname','lastname','email','company','owner_name','city','state','createdate','lastmodifieddate']);
+  const tr = document.querySelector('#contactsHead tr');
+  tr.innerHTML = cols.map(col => {
+    const label = labels[col] || formatLabel(col);
+    if (sortableCols.has(col)) {
+      const isSorted = state.contacts.sort === col;
+      const arrow = isSorted ? (state.contacts.order === 'asc' ? '&#9650;' : '&#9660;') : '&#9650;';
+      return `<th data-sort="${col}" class="${isSorted ? 'sorted' : ''}" onclick="sortContacts('${col}')">${label} <span class="sort-arrow">${arrow}</span></th>`;
+    }
+    return `<th>${label}</th>`;
+  }).join('');
+}
+
+function sortContacts(col) {
+  if (state.contacts.sort === col) {
+    state.contacts.order = state.contacts.order === 'asc' ? 'desc' : 'asc';
+  } else { state.contacts.sort = col; state.contacts.order = 'asc'; }
+  state.contacts.page = 1;
+  loadContacts();
+}
+
+function renderContacts(data) {
+  renderContactsHeader();
+  document.getElementById('contactsResultCount').textContent = `${data.total.toLocaleString()} contacts`;
+  const cols = getContactCols();
+  const tbody = document.getElementById('contactsBody');
+  if (!data.contacts.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:40px;color:var(--text2);">No contacts match your filters</td></tr>`;
+  } else {
+    tbody.innerHTML = data.contacts.map(c => {
+      return `<tr class="clickable" onclick="openContact('${c.id}')">` +
+        cols.map(col => {
+          if (col === 'lastname') {
+            const name = [c.firstname, c.lastname].filter(Boolean).join(' ') || '—';
+            return `<td><span class="contact-name">${esc(name)}</span></td>`;
+          }
+          if (col === 'activity_count') return `<td>${c.activity_count || 0}</td>`;
+          if (col === 'last_activity') return `<td style="white-space:nowrap;">${c.last_activity ? formatDate(c.last_activity) : '—'}</td>`;
+          return `<td>${esc(String(c[col] || ''))}</td>`;
+        }).join('') + '</tr>';
+    }).join('');
+  }
+  const pag = document.getElementById('contactsPagination');
+  const start = ((data.page-1)*data.per_page)+1;
+  const end = Math.min(data.page*data.per_page, data.total);
+  pag.innerHTML = `
+    <span>Showing ${start}–${end} of ${data.total.toLocaleString()}</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-sm" ${data.page<=1?'disabled':''} onclick="state.contacts.page--;loadContacts()">&#8592; Prev</button>
+      <span>Page ${data.page} / ${data.total_pages}</span>
+      <button class="btn btn-sm" ${data.page>=data.total_pages?'disabled':''} onclick="state.contacts.page++;loadContacts()">Next &#8594;</button>
+    </div>`;
+}
+
+// Search
+let searchTimeout;
+document.getElementById('contactSearch').addEventListener('input', e => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    state.contacts.search = e.target.value;
+    state.contacts.page = 1;
+    loadContacts();
+  }, 300);
+});
+
+document.getElementById('perPageSelect').addEventListener('change', e => {
+  state.contacts.per_page = parseInt(e.target.value);
+  state.contacts.page = 1;
+  loadContacts();
+});
+
+// ══════════════════════════════════════
+// COMPANIES LIST
+// ══════════════════════════════════════
+async function loadCompanies() {
+  const s = state.companies;
+  const params = new URLSearchParams({ page: s.page, per_page: s.per_page, search: s.search });
+  const d = await (await fetch('/api/companies?' + params)).json();
+  renderCompanies(d);
+}
+
+function renderCompaniesHeader() {
+  const cols = getCompanyCols();
+  const labels = COMPANY_COL_LABELS;
+  const tr = document.querySelector('#companiesHead tr');
+  tr.innerHTML = cols.map(col => {
+    const label = labels[col] || formatLabel(col);
+    return `<th>${label}</th>`;
+  }).join('');
+}
+
+function renderCompanies(data) {
+  renderCompaniesHeader();
+  document.getElementById('companiesResultCount').textContent = `${data.total.toLocaleString()} companies`;
+  const cols = getCompanyCols();
+  const tbody = document.getElementById('companiesBody');
+  if (!data.companies.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:40px;color:var(--text2);">No companies found</td></tr>`;
+  } else {
+    tbody.innerHTML = data.companies.map(c => `
+      <tr class="clickable" onclick="openCompany('${c.id}')">` +
+        cols.map(col => {
+          if (col === 'name') return `<td><span class="contact-name">${esc(c.name || '')}</span></td>`;
+          if (col === 'contact_count') return `<td>${c.contact_count || 0}</td>`;
+          return `<td>${esc(String(c[col] || ''))}</td>`;
+        }).join('') + '</tr>'
+    ).join('');
+  }
+  const tp = Math.ceil(data.total / data.per_page);
+  document.getElementById('companiesPagination').innerHTML = `
+    <span>Showing ${((data.page-1)*data.per_page)+1}–${Math.min(data.page*data.per_page, data.total)} of ${data.total.toLocaleString()}</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-sm" ${data.page<=1?'disabled':''} onclick="state.companies.page--;loadCompanies()">&#8592; Prev</button>
+      <span>Page ${data.page} / ${tp}</span>
+      <button class="btn btn-sm" ${data.page>=tp?'disabled':''} onclick="state.companies.page++;loadCompanies()">Next &#8594;</button>
+    </div>`;
+}
+
+let compSearchTimeout;
+document.getElementById('companySearch').addEventListener('input', e => {
+  clearTimeout(compSearchTimeout);
+  compSearchTimeout = setTimeout(() => {
+    state.companies.search = e.target.value;
+    state.companies.page = 1;
+    loadCompanies();
+  }, 300);
+});
+
+// ══════════════════════════════════════
+// MARKETING LISTS
+// ══════════════════════════════════════
+async function loadLists() {
+  const lists = await (await fetch('/api/lists')).json();
+  const container = document.getElementById('listsContainer');
+  if (!lists.length) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:var(--text2);">
+        <div style="font-size:48px;margin-bottom:12px;opacity:.3;">&#9776;</div>
+        <p style="font-size:16px;margin-bottom:8px;">No marketing lists yet</p>
+        <p style="font-size:13px;">Create a list from your contact filters to build dynamic audiences that auto-update.</p>
+      </div>`;
+    return;
+  }
+  container.innerHTML = lists.map(l => {
+    const filterSummary = l.filters.map(f => {
+      const val = Array.isArray(f.value) ? f.value.join(', ') : (f.value || '');
+      return `<span class="filter-pill">${formatLabel(f.field)} ${f.op.replace(/_/g,' ')} ${val}</span>`;
+    }).join(' ');
+    return `
+    <div class="list-card" onclick="openListDetail(${l.id})">
+      <div class="list-icon">&#9776;</div>
+      <div class="list-info">
+        <h3>${esc(l.name)}</h3>
+        <p>${esc(l.description || '')}</p>
+        <div style="margin-top:6px;">${filterSummary || '<span style="font-size:12px;color:var(--text3);">No criteria (all contacts)</span>'}</div>
+      </div>
+      <div style="text-align:center;margin-right:12px;">
+        <div class="list-count">${l.count.toLocaleString()}</div>
+        <div class="list-count-label">contacts</div>
+      </div>
+      <div class="list-actions" onclick="event.stopPropagation();">
+        <button class="btn btn-sm" onclick="editListById(${l.id})">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteList(${l.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openListDetail(id) {
+  state.listDetailId = id;
+  state.listDetailPage = 1;
+  const list = await (await fetch(`/api/lists/${id}`)).json();
+
+  document.getElementById('listsView').style.display = 'none';
+  document.getElementById('listDetailView').style.display = '';
+  document.getElementById('listDetailName').textContent = list.name;
+  document.getElementById('listDetailDesc').textContent = list.description || '';
+  document.getElementById('listDetailFilters').innerHTML =
+    list.filters.map(f => {
+      const val = Array.isArray(f.value) ? f.value.join(', ') : (f.value || '');
+      return `<span class="filter-pill">${formatLabel(f.field)} ${f.op.replace(/_/g,' ')} ${val}</span>`;
+    }).join('');
+  document.getElementById('listExportBtn').onclick = () => window.open(`/api/lists/${id}/export`, '_blank');
+
+  loadListContacts(id, 1);
+}
+
+async function loadListContacts(id, page) {
+  state.listDetailPage = page;
+  const d = await (await fetch(`/api/lists/${id}/contacts?page=${page}&per_page=50`)).json();
+  document.getElementById('listDetailResultCount').textContent = `${d.total.toLocaleString()} contacts in this list`;
+  const tbody = document.getElementById('listDetailBody');
+  tbody.innerHTML = d.contacts.map(c => {
+    const name = [c.firstname, c.lastname].filter(Boolean).join(' ') || '—';
+    const lastAct = c.last_activity ? formatDate(c.last_activity) : '—';
+    return `<tr class="clickable" onclick="openContact('${c.id}')">
+      <td><span class="contact-name">${esc(name)}</span></td>
+      <td>${esc(c.email||'')}</td><td>${esc(c.company||'')}</td><td>${esc(c.jobtitle||'')}</td>
+      <td>${esc(c.city||'')}</td><td>${esc(c.state||'')}</td><td>${esc(c.owner_name||'')}</td>
+      <td>${c.activity_count||0}</td><td style="white-space:nowrap;">${lastAct}</td>
+    </tr>`;
+  }).join('');
+
+  const pag = document.getElementById('listDetailPagination');
+  const start = ((d.page-1)*d.per_page)+1;
+  const end = Math.min(d.page*d.per_page, d.total);
+  pag.innerHTML = `
+    <span>Showing ${start}–${end} of ${d.total.toLocaleString()}</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-sm" ${d.page<=1?'disabled':''} onclick="loadListContacts(${id},${d.page-1})">&#8592; Prev</button>
+      <span>Page ${d.page} / ${d.total_pages}</span>
+      <button class="btn btn-sm" ${d.page>=d.total_pages?'disabled':''} onclick="loadListContacts(${id},${d.page+1})">Next &#8594;</button>
+    </div>`;
+}
+
+function closeListDetail() {
+  document.getElementById('listDetailView').style.display = 'none';
+  document.getElementById('listsView').style.display = '';
+  loadLists();
+}
+
+async function editListById(id) {
+  const list = await (await fetch(`/api/lists/${id}`)).json();
+  openListBuilder(id, list);
+}
+
+async function deleteList(id) {
+  if (!confirm('Delete this marketing list?')) return;
+  await fetch(`/api/lists/${id}`, { method: 'DELETE' });
+  loadLists();
+}
+
+// ══════════════════════════════════════
+// CONTACT DETAIL
+// ══════════════════════════════════════
+async function openContact(id) {
+  document.getElementById('listView').style.display = 'none';
+  const dp = document.getElementById('detailPage');
+  dp.classList.add('active');
+  document.getElementById('detailContent').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text2);">Loading...</p>';
+
+  const [contact, actData] = await Promise.all([
+    (await fetch(`/api/contacts/${id}`)).json(),
+    (await fetch(`/api/contacts/${id}/activities?per_page=25`)).json()
+  ]);
+
+  const name = [contact.firstname, contact.lastname].filter(Boolean).join(' ') || 'Unknown';
+  const initials = name.split(' ').map(n => (n||'')[0]).join('').toUpperCase().slice(0,2);
+
+  const quickItems = [
+    contact.email && `<div class="quick-item"><span class="qi-label">Email</span> ${esc(contact.email)}</div>`,
+    (contact.phone || contact.properties?.mobilephone) && `<div class="quick-item"><span class="qi-label">Phone</span> ${esc(contact.phone || contact.properties?.mobilephone)}</div>`,
+    contact.owner_name && `<div class="quick-item"><span class="qi-label">Owner</span> ${esc(contact.owner_name)}</div>`,
+    contact.company && `<div class="quick-item"><span class="qi-label">Company</span> ${esc(contact.company)}</div>`,
+  ].filter(Boolean).join('');
+
+  const contactFieldsList = ['email','phone','mobilephone','fax','address','city','state','zip','country',
+    'website','lifecyclestage','hs_lead_status','owner_name','owner_email','createdate','lastmodifieddate',
+    'hs_analytics_source'];
+  const contactProps = buildPropsHtml(contact, contactFieldsList);
+
+  const allProps = contact.properties || {};
+  const customKeys = Object.keys(allProps).filter(k => !k.startsWith('hs_') && !contactFieldsList.includes(k) && allProps[k]).sort();
+  const customProps = customKeys.map(k =>
+    `<div class="prop"><div class="prop-label">${formatLabel(k)}</div><div class="prop-val">${esc(String(allProps[k]).slice(0,300))}</div></div>`
+  ).join('');
+
+  const hsKeys = Object.keys(allProps).filter(k => k.startsWith('hs_') && allProps[k] && !contactFieldsList.includes(k)).sort();
+  const hsProps = hsKeys.map(k =>
+    `<div class="prop"><div class="prop-label">${formatLabel(k)}</div><div class="prop-val">${esc(String(allProps[k]).slice(0,300))}</div></div>`
+  ).join('');
+
+  let companiesHtml = '';
+  if (contact.companies?.length) {
+    companiesHtml = contact.companies.map(co =>
+      `<div class="company-link-card" onclick="openCompany('${co.id}')">
+        <h4>${esc(co.name || 'Unknown')}</h4>
+        <p>${[co.domain, co.industry, [co.city, co.state].filter(Boolean).join(', ')].filter(Boolean).join(' &middot; ')}</p>
+      </div>`
+    ).join('');
+  } else {
+    companiesHtml = '<p style="color:var(--text3);font-size:13px;">No associated companies</p>';
+  }
+
+  const actHtml = buildActivityTimeline(actData, id);
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detail-top">
+      <div class="detail-avatar">${initials}</div>
+      <div class="detail-top-info">
+        <h2>${esc(name)}</h2>
+        <p>${esc(contact.jobtitle || contact.properties?.jobtitle || '')}${contact.company ? ' at ' + esc(contact.company) : ''}</p>
+        <div class="detail-top-quick">${quickItems}</div>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <div class="accordion">
+        <div class="accordion-header open" onclick="toggleAcc(this)">
+          Contact Information <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body open"><div class="props-grid">${contactProps}</div></div>
+      </div>
+      <div class="accordion">
+        <div class="accordion-header open" onclick="toggleAcc(this)">
+          Companies (${contact.companies?.length || 0}) <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body open">${companiesHtml}</div>
+      </div>
+      ${customKeys.length ? `
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAcc(this)">
+          Custom Properties (${customKeys.length}) <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body"><div class="props-grid">${customProps}</div></div>
+      </div>` : ''}
+      ${hsKeys.length ? `
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAcc(this)">
+          HubSpot Properties (${hsKeys.length}) <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body"><div class="props-grid">${hsProps}</div></div>
+      </div>` : ''}
+      <div class="accordion full-width">
+        <div class="accordion-header open" onclick="toggleAcc(this)" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Activity Timeline (${actData.total})</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-sm btn-green" onclick="event.stopPropagation();openAddActivity('${id}',null)" style="font-size:11px;">+ Add Activity</button>
+            <span class="acc-icon">&#9660;</span>
+          </span>
+        </div>
+        <div class="accordion-body open" id="activityAccBody">${actHtml}</div>
+      </div>
+    </div>`;
+
+  window.scrollTo(0, 0);
+}
+
+function buildPropsHtml(obj, fields) {
+  return fields.map(key => {
+    const val = obj[key] || obj.properties?.[key];
+    if (!val) return '';
+    return `<div class="prop"><div class="prop-label">${formatLabel(key)}</div><div class="prop-val">${esc(String(val))}</div></div>`;
+  }).filter(Boolean).join('');
+}
+
+function toggleAcc(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPage').classList.remove('active');
+  document.getElementById('listView').style.display = '';
+}
+
+// ══════════════════════════════════════
+// COMPANY DETAIL
+// ══════════════════════════════════════
+async function openCompany(id) {
+  document.getElementById('listView').style.display = 'none';
+  const dp = document.getElementById('detailPage');
+  dp.classList.add('active');
+  document.getElementById('detailContent').innerHTML = '<p style="padding:40px;text-align:center;color:var(--text2);">Loading...</p>';
+
+  const [company, compActData] = await Promise.all([
+    (await fetch(`/api/companies/${id}`)).json(),
+    (await fetch(`/api/companies/${id}/activities?per_page=25`)).json()
+  ]);
+  const compFields = ['name','domain','industry','phone','city','state','country','website',
+    'owner_name','numberofemployees','annualrevenue','description','createdate'];
+  const compProps = buildPropsHtml(company, compFields);
+
+  const allProps = company.properties || {};
+  const otherKeys = Object.keys(allProps).filter(k => !compFields.includes(k) && allProps[k]).sort();
+  const otherProps = otherKeys.map(k =>
+    `<div class="prop"><div class="prop-label">${formatLabel(k)}</div><div class="prop-val">${esc(String(allProps[k]).slice(0,300))}</div></div>`
+  ).join('');
+
+  let contactsHtml = '';
+  if (company.contacts?.length) {
+    contactsHtml = company.contacts.map(c => {
+      const cname = [c.firstname, c.lastname].filter(Boolean).join(' ') || 'Unknown';
+      return `<div class="company-link-card" onclick="openContact('${c.id}')">
+        <h4>${esc(cname)}</h4>
+        <p>${[c.jobtitle, c.email, c.phone].filter(Boolean).map(esc).join(' &middot; ')}</p>
+      </div>`;
+    }).join('');
+  } else {
+    contactsHtml = '<p style="color:var(--text3);font-size:13px;">No associated contacts</p>';
+  }
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detail-top">
+      <div class="detail-avatar company-avatar">${(company.name||'?')[0].toUpperCase()}</div>
+      <div class="detail-top-info">
+        <h2>${esc(company.name || 'Unknown')}</h2>
+        <p>${[company.domain, company.industry].filter(Boolean).map(esc).join(' &middot; ')}</p>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <div class="accordion">
+        <div class="accordion-header open" onclick="toggleAcc(this)">
+          Company Information <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body open"><div class="props-grid">${compProps}</div></div>
+      </div>
+      <div class="accordion">
+        <div class="accordion-header open" onclick="toggleAcc(this)">
+          Contacts (${company.contacts?.length || 0}) <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body open">${contactsHtml}</div>
+      </div>
+      ${company.sm_account_id ? `
+      <div class="accordion">
+        <div class="accordion-header open" onclick="toggleAcc(this)">
+          Ad Sales <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body open">
+          <div class="props-grid">
+            <div class="prop"><div class="prop-label">Total Revenue</div><div class="prop-val" style="font-weight:700;">${fmtMoney(company.sm_revenue)}</div></div>
+            <div class="prop"><div class="prop-label">Insertions</div><div class="prop-val">${company.sm_insertions.toLocaleString()}</div></div>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn btn-sm" onclick="showTab('sales');openSalesDetail(${company.sm_account_id});">View in Sales Tab</button>
+          </div>
+        </div>
+      </div>` : ''}
+      <div class="accordion full-width">
+        <div class="accordion-header open" onclick="toggleAcc(this)" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Activity Timeline (${compActData.total})</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-sm btn-green" onclick="event.stopPropagation();openAddActivity(null,'${id}')" style="font-size:11px;">+ Add Activity</button>
+            <span class="acc-icon">&#9660;</span>
+          </span>
+        </div>
+        <div class="accordion-body open" id="companyActivityAccBody">${buildCompanyActivityTimeline(compActData, id)}</div>
+      </div>
+      ${otherKeys.length ? `
+      <div class="accordion full-width">
+        <div class="accordion-header" onclick="toggleAcc(this)">
+          All Properties (${otherKeys.length}) <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body"><div class="props-grid">${otherProps}</div></div>
+      </div>` : ''}
+    </div>`;
+
+  window.scrollTo(0, 0);
+}
+
+// ══════════════════════════════════════
+// ACTIVITY TIMELINE
+// ══════════════════════════════════════
+function buildActivityTimeline(data, contactId) {
+  let html = '<div class="activity-filters">';
+  html += `<span class="act-filter-btn active" onclick="filterActs('${contactId}','',this)">All (${data.total})</span>`;
+  const typeOrder = ['emails','calls','meetings','notes','tasks'];
+  typeOrder.forEach(t => {
+    const cnt = data.type_counts?.[t];
+    if (cnt) html += `<span class="act-filter-btn" onclick="filterActs('${contactId}','${t}',this)">${t} (${cnt})</span>`;
+  });
+  html += '</div><div id="activityList">';
+  data.activities.forEach(a => { html += renderActivityItem(a); });
+  html += '</div>';
+  if (data.total > data.activities.length) {
+    html += `<button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreActs('${contactId}','',2)">
+      Load more (${data.total - data.activities.length} remaining)</button>`;
+  }
+  return html;
+}
+
+function renderActivityItem(a) {
+  const badge = `<span class="badge badge-${a.type}">${a.type}</span>`;
+  const ts = a.timestamp ? formatDate(a.timestamp) : '';
+  let dir = '';
+  if (a.direction) {
+    const isIn = a.direction.toLowerCase().includes('in');
+    dir = `<span class="${isIn ? 'dir-in' : 'dir-out'}">${isIn ? '&#8592; In' : '&#8594; Out'}</span>`;
+  }
+  const owner = a.owner_name ? `<span>${esc(a.owner_name)}</span>` : '';
+  const emails = [a.from_email, a.to_email].filter(Boolean);
+  const emailInfo = emails.length ? `<span>${emails.map(esc).join(' &#8594; ')}</span>` : '';
+  const subj = a.subject ? `<div class="activity-subject">${esc(a.subject)}</div>` : '';
+  const body = a.body ? `<div class="activity-body" onclick="this.classList.toggle('expanded')">${esc(a.body)}</div>` : '';
+  return `<div class="activity-item"><div class="activity-meta">${badge} ${dir} <span>${ts}</span> ${owner} ${emailInfo}</div>${subj}${body}</div>`;
+}
+
+async function filterActs(contactId, type, btn) {
+  document.querySelectorAll('.act-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const params = new URLSearchParams({ per_page: 25 });
+  if (type) params.set('type', type);
+  const data = await (await fetch(`/api/contacts/${contactId}/activities?${params}`)).json();
+  document.getElementById('activityList').innerHTML = data.activities.map(renderActivityItem).join('');
+  const existing = document.getElementById('loadMoreBtn');
+  if (existing) existing.remove();
+  if (data.total > data.activities.length) {
+    const btn2 = document.createElement('button');
+    btn2.className = 'load-more-btn'; btn2.id = 'loadMoreBtn';
+    btn2.textContent = `Load more (${data.total - data.activities.length} remaining)`;
+    btn2.onclick = () => loadMoreActs(contactId, type, 2);
+    document.getElementById('activityAccBody').appendChild(btn2);
+  }
+}
+
+async function loadMoreActs(contactId, type, page) {
+  const params = new URLSearchParams({ page, per_page: 25 });
+  if (type) params.set('type', type);
+  const data = await (await fetch(`/api/contacts/${contactId}/activities?${params}`)).json();
+  const list = document.getElementById('activityList');
+  data.activities.forEach(a => { list.insertAdjacentHTML('beforeend', renderActivityItem(a)); });
+  const existing = document.getElementById('loadMoreBtn');
+  if (existing) existing.remove();
+  const loaded = page * 25;
+  if (data.total > loaded) {
+    const btn = document.createElement('button');
+    btn.className = 'load-more-btn'; btn.id = 'loadMoreBtn';
+    btn.textContent = `Load more (${data.total - loaded} remaining)`;
+    btn.onclick = () => loadMoreActs(contactId, type, page + 1);
+    document.getElementById('activityAccBody').appendChild(btn);
+  }
+}
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function formatDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return ts;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function formatLabel(key) {
+  return key.replace(/^(hs_|cust_|hubspot_)/, '').replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ══════════════════════════════════════
+// SALES TAB
+// ══════════════════════════════════════
+let salesInited = false;
+let salesPage = 1;
+
+async function initSales() {
+  if (!salesInited) {
+    salesInited = true;
+    const [pubs, reps] = await Promise.all([
+      fetch('/api/sales/publications').then(r => r.json()),
+      fetch('/api/sales/stats').then(r => r.json()),
+    ]);
+    const repSel = document.getElementById('salesRepFilter');
+    reps.reps.forEach(r => {
+      repSel.innerHTML += `<option value="${esc(r.rep_id)}">${esc(r.rep_id)}</option>`;
+    });
+    const pubSel = document.getElementById('salesPubFilter');
+    pubs.forEach(p => {
+      pubSel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`;
+    });
+    let salesSearchTimeout;
+    document.getElementById('salesSearch').addEventListener('input', () => {
+      clearTimeout(salesSearchTimeout);
+      salesSearchTimeout = setTimeout(() => { salesPage = 1; loadSalesAccounts(); }, 300);
+    });
+    document.getElementById('salesRepFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
+    document.getElementById('salesPubFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
+    document.getElementById('salesSort').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
+    renderSalesDashboard(reps);
+  }
+  loadSalesAccounts();
+}
+
+function renderSalesDashboard(stats) {
+  document.getElementById('salesDashboard').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${stats.total_accounts.toLocaleString()}</div><div class="stat-label">Accounts</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.total_contacts.toLocaleString()}</div><div class="stat-label">Contacts</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.total_contracts.toLocaleString()}</div><div class="stat-label">Contracts</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.total_insertions.toLocaleString()}</div><div class="stat-label">Insertions</div></div>
+    <div class="stat-card"><div class="stat-value">$${(stats.total_revenue/1000000).toFixed(1)}M</div><div class="stat-label">Total Revenue</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.publications}</div><div class="stat-label">Publications</div></div>
+  `;
+}
+
+function fmtMoney(v) {
+  if (!v) return '$0';
+  if (v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
+  if (v >= 1000) return '$' + (v/1000).toFixed(1) + 'K';
+  return '$' + v.toFixed(0);
+}
+
+function fmtSmDate(d) {
+  if (!d) return '—';
+  const m = d.match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
+  if (!m) return d;
+  const yr = m[3].length === 2 ? (parseInt(m[3]) > 50 ? '19' + m[3] : '20' + m[3]) : m[3];
+  return m[1] + '/' + yr;
+}
+
+async function loadSalesAccounts() {
+  const q = document.getElementById('salesSearch').value.trim();
+  const rep = document.getElementById('salesRepFilter').value;
+  const pub = document.getElementById('salesPubFilter').value;
+  const sv = document.getElementById('salesSort').value.split(':');
+  const params = new URLSearchParams({
+    page: salesPage, per_page: 50, q, rep, pub, sort: sv[0], order: sv[1]
+  });
+  const d = await (await fetch('/api/sales/accounts?' + params)).json();
+  document.getElementById('salesResultCount').textContent = `${d.total.toLocaleString()} accounts`;
+
+  document.getElementById('salesBody').innerHTML = d.accounts.map(a => `
+    <tr class="clickable" onclick="openSalesDetail(${a.id})">
+      <td><span class="contact-name">${esc(a.company)}</span></td>
+      <td>${a.contact_count}</td>
+      <td>${a.contract_count}</td>
+      <td>${a.insertion_count.toLocaleString()}</td>
+      <td style="font-weight:600;">${fmtMoney(a.total_revenue)}</td>
+      <td style="white-space:nowrap;">${fmtSmDate(a.last_issue_date)}</td>
+      <td>${a.credit_hold ? '<span class="credit-hold-badge">HOLD</span>' : '<span class="credit-ok-badge">OK</span>'}${a.hubspot_company_id ? ' <span class="hs-linked-badge">HS</span>' : ''}</td>
+    </tr>
+  `).join('');
+
+  const pag = document.getElementById('salesPagination');
+  const start = ((d.page-1)*d.per_page)+1;
+  const end = Math.min(d.page*d.per_page, d.total);
+  pag.innerHTML = d.total ? `
+    <span>Showing ${start}–${end} of ${d.total.toLocaleString()}</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-sm" ${d.page<=1?'disabled':''} onclick="salesPage=${d.page-1};loadSalesAccounts()">&#8592; Prev</button>
+      <span>Page ${d.page} / ${d.total_pages}</span>
+      <button class="btn btn-sm" ${d.page>=d.total_pages?'disabled':''} onclick="salesPage=${d.page+1};loadSalesAccounts()">Next &#8594;</button>
+    </div>` : '';
+}
+
+let currentSalesAccountId = null;
+let currentSalesAccountName = '';
+
+async function openSalesDetail(id) {
+  const d = await (await fetch(`/api/sales/accounts/${id}`)).json();
+  document.getElementById('salesView').style.display = 'none';
+  document.getElementById('salesDetailView').style.display = '';
+  currentSalesAccountId = id;
+  currentSalesAccountName = d.company.company;
+
+  const co = d.company;
+  const cats = d.categories.map(c => `<span class="filter-pill">${esc(c)}</span>`).join(' ');
+  const allContacts = [...d.contacts, ...d.hs_contacts];
+
+  let html = `
+    <div class="sales-detail-header">
+      <div style="flex:1;">
+        <h2>${esc(co.company)}</h2>
+        <div class="meta">
+          ${d.insertion_count.toLocaleString()} insertions &middot; ${fmtMoney(d.total_revenue)} total revenue
+          ${co.credit_hold ? ' &middot; <span class="credit-hold-badge">CREDIT HOLD</span>' : ''}
+        </div>
+        <div class="meta" style="margin-top:4px;">
+          ${co.domain ? esc(co.domain) + ' &middot; ' : ''}${co.hs_city ? esc(co.hs_city) + (co.hs_state ? ', ' + esc(co.hs_state) : '') + ' &middot; ' : ''}${co.hs_phone ? esc(co.hs_phone) + ' &middot; ' : ''}${co.owner_name ? 'Owner: ' + esc(co.owner_name) : ''}
+        </div>
+        ${cats ? `<div style="margin-top:8px;">${cats}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="sales-detail-tabs">
+      <span class="sd-tab active" onclick="switchSdTab(this,'sdOverview')">Overview</span>
+      <span class="sd-tab" onclick="switchSdTab(this,'sdContracts')">Contracts (${d.contracts.length})</span>
+      <span class="sd-tab" onclick="switchSdTab(this,'sdInsertions')">Insertions</span>
+      <span class="sd-tab" onclick="switchSdTab(this,'sdContacts')">Contacts (${allContacts.length})</span>
+    </div>
+
+    <!-- Overview Tab -->
+    <div class="sd-tab-content active" id="sdOverview">
+      <div class="sales-detail-grid">
+        <div class="sales-panel">
+          <h3>Revenue by Year</h3>
+          <table>
+            <thead><tr><th>Year</th><th>Insertions</th><th style="text-align:right;">Revenue</th></tr></thead>
+            <tbody>
+            ${d.revenue_by_year.map(y => `
+              <tr>
+                <td>${parseInt(y.year) > 50 ? '19' + y.year : '20' + y.year}</td>
+                <td>${y.count}</td>
+                <td style="text-align:right;font-weight:600;">${fmtMoney(y.revenue)}</td>
+              </tr>
+            `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="sales-panel">
+          <h3>Revenue by Publication</h3>
+          <table>
+            <thead><tr><th>Publication</th><th>Insertions</th><th style="text-align:right;">Revenue</th></tr></thead>
+            <tbody>
+            ${d.revenue_by_pub.map(p => `
+              <tr>
+                <td>${esc(p.publication)}</td>
+                <td>${p.count}</td>
+                <td style="text-align:right;font-weight:600;">${fmtMoney(p.revenue)}</td>
+              </tr>
+            `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sales-panel">
+        <div class="sales-panel-header">
+          <h3>Recent Contracts</h3>
+          <button class="btn btn-sm btn-green" onclick="openContractForm(null,'${esc(co.company)}')">+ New Contract</button>
+        </div>
+        <table>
+          <thead><tr><th>Publication</th><th>Type</th><th>Rate</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+          <tbody>
+          ${d.contracts.slice(0, 5).map(ct => `
+            <tr class="clickable" onclick="openContractForm(${ct.id})">
+              <td>${esc(ct.publication || '')}</td>
+              <td>${esc(ct.type_ad || '')}</td>
+              <td>${esc(ct.rate || '')}</td>
+              <td style="white-space:nowrap;">${fmtSmDate(ct.contract_start)}</td>
+              <td style="white-space:nowrap;">${fmtSmDate(ct.contract_end)}</td>
+              <td>${esc(ct.status || '')}</td>
+            </tr>
+          `).join('')}
+          ${d.contracts.length > 5 ? `<tr><td colspan="6" style="text-align:center;color:var(--text3);font-size:12px;cursor:pointer;" onclick="switchSdTab(document.querySelectorAll('.sd-tab')[1],'sdContracts')">View all ${d.contracts.length} contracts &rarr;</td></tr>` : ''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Contracts Tab -->
+    <div class="sd-tab-content" id="sdContracts">
+      <div class="sales-panel">
+        <div class="sales-panel-header">
+          <h3>Contracts</h3>
+          <button class="btn btn-sm btn-green" onclick="openContractForm(null,'${esc(co.company)}')">+ New Contract</button>
+        </div>
+        <div class="sd-filter-bar" id="ctFilterBar">
+          <select id="ctFilterPub" onchange="loadAccountContracts()"><option value="">All Publications</option></select>
+          <select id="ctFilterType" onchange="loadAccountContracts()"><option value="">All Types</option></select>
+          <select id="ctFilterStatus" onchange="loadAccountContracts()">
+            <option value="">All Statuses</option><option value="Active">Active</option>
+            <option value="Pending">Pending</option><option value="Expired">Expired</option><option value="Canceled">Canceled</option>
+          </select>
+          <select id="ctFilterRep" onchange="loadAccountContracts()"><option value="">All Reps</option></select>
+        </div>
+        <div id="salesContracts"></div>
+      </div>
+    </div>
+
+    <!-- Insertions Tab -->
+    <div class="sd-tab-content" id="sdInsertions">
+      <div class="sales-panel">
+        <div class="sales-panel-header">
+          <h3>Insertion History</h3>
+          <button class="btn btn-sm btn-green" onclick="openInsertionForm(null,'${esc(co.company)}')">+ New Insertion</button>
+        </div>
+        <div class="sd-filter-bar" id="insFilterBar">
+          <select id="insFilterPub" onchange="loadSalesInsertions(currentSalesAccountId,1)"><option value="">All Publications</option></select>
+          <select id="insFilterType" onchange="loadSalesInsertions(currentSalesAccountId,1)"><option value="">All Types</option></select>
+          <select id="insFilterRep" onchange="loadSalesInsertions(currentSalesAccountId,1)"><option value="">All Reps</option></select>
+          <select id="insFilterStatus" onchange="loadSalesInsertions(currentSalesAccountId,1)">
+            <option value="">Active (non-canceled)</option><option value="open">Open</option>
+            <option value="closed">Closed</option><option value="canceled">Canceled</option>
+          </select>
+        </div>
+        <div id="salesInsertions"></div>
+        <div class="pagination" id="salesInsPagination"></div>
+      </div>
+    </div>
+
+    <!-- Contacts Tab -->
+    <div class="sd-tab-content" id="sdContacts">
+      <div class="sales-panel">
+        <h3>Contacts (${allContacts.length})</h3>
+        ${allContacts.length ? allContacts.map(c => {
+          if (c.source === 'hubspot') {
+            const nm = ((c.firstname || '') + ' ' + (c.lastname || '')).trim();
+            return `<div class="contact-card" style="cursor:pointer;" onclick="showTab('contacts');openContact('${c.id}');">
+              <div>
+                <div class="cc-name">${esc(nm)} <span class="hs-linked-badge">HS</span></div>
+                <div class="cc-title">${esc(c.jobtitle || '')}</div>
+              </div>
+              <div class="cc-contact">
+                ${c.email ? '<div>' + esc(c.email) + '</div>' : ''}
+                ${c.phone ? '<div>' + esc(c.phone) + '</div>' : ''}
+              </div>
+            </div>`;
+          }
+          return `<div class="contact-card">
+            <div>
+              <div class="cc-name">${esc(c.prefix || '')} ${esc(c.name || '')}</div>
+              <div class="cc-title">${esc(c.title || '')}${c.contact_type ? ' &middot; ' + esc(c.contact_type) : ''}</div>
+            </div>
+            <div class="cc-contact">
+              ${c.email ? '<div>' + esc(c.email) + '</div>' : ''}
+              ${c.phone ? '<div>' + esc(c.phone) + (c.ext ? ' x' + esc(c.ext) : '') + '</div>' : ''}
+            </div>
+          </div>`;
+        }).join('') : '<div style="color:var(--text3);font-size:13px;">No contacts on file</div>'}
+      </div>
+    </div>
+  `;
+  document.getElementById('salesDetailContent').innerHTML = html;
+  ctSort = {col: 'contract_start', dir: 'desc'};
+  insSort = {col: 'issue_date', dir: 'desc'};
+  initSdFilters();
+}
+
+function switchSdTab(tabEl, contentId) {
+  document.querySelectorAll('.sd-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sd-tab-content').forEach(c => c.classList.remove('active'));
+  tabEl.classList.add('active');
+  document.getElementById(contentId).classList.add('active');
+  if (contentId === 'sdContracts' && !document.getElementById('salesContracts').children.length) {
+    loadAccountContracts();
+  }
+  if (contentId === 'sdInsertions' && !document.getElementById('salesInsertions').children.length) {
+    loadSalesInsertions(currentSalesAccountId, 1);
+  }
+}
+
+let ctSort = {col: 'contract_start', dir: 'desc'};
+let insSort = {col: 'issue_date', dir: 'desc'};
+
+function sortCtCol(col) {
+  if (ctSort.col === col) ctSort.dir = ctSort.dir === 'asc' ? 'desc' : 'asc';
+  else { ctSort.col = col; ctSort.dir = 'desc'; }
+  loadAccountContracts();
+}
+function sortInsCol(col) {
+  if (insSort.col === col) insSort.dir = insSort.dir === 'asc' ? 'desc' : 'asc';
+  else { insSort.col = col; insSort.dir = 'desc'; }
+  loadSalesInsertions(currentSalesAccountId, 1);
+}
+
+function sortTh(label, col, current) {
+  const cls = current.col === col ? 'sortable sorted' : 'sortable';
+  const arrow = current.col === col ? (current.dir === 'asc' ? '&#9650;' : '&#9660;') : '&#9660;';
+  return `<th class="${cls}"><span>${label}</span><span class="sort-arrow">${arrow}</span></th>`;
+}
+
+async function initSdFilters() {
+  const lk = await loadLookups();
+  const pubNames = lk.publications.map(p => p.publication);
+  const repIds = lk.reps.map(r => r.rep_id);
+  const adTypes = Object.values(lk.ad_types_by_pub).flat().filter((v,i,a) => a.indexOf(v) === i).sort();
+  [['ctFilterPub', pubNames, 'All Publications'],
+   ['ctFilterType', adTypes, 'All Types'],
+   ['ctFilterRep', repIds, 'All Reps'],
+   ['insFilterPub', pubNames, 'All Publications'],
+   ['insFilterType', adTypes, 'All Types'],
+   ['insFilterRep', repIds, 'All Reps']
+  ].forEach(([id, opts, ph]) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = `<option value="">${ph}</option>`;
+    opts.forEach(o => { sel.innerHTML += `<option value="${esc(o)}">${esc(o)}</option>`; });
+  });
+}
+
+async function loadAccountContracts() {
+  const id = currentSalesAccountId;
+  const pub = document.getElementById('ctFilterPub')?.value || '';
+  const type = document.getElementById('ctFilterType')?.value || '';
+  const status = document.getElementById('ctFilterStatus')?.value || '';
+  const rep = document.getElementById('ctFilterRep')?.value || '';
+  const params = new URLSearchParams({sort: ctSort.col, order: ctSort.dir});
+  if (pub) params.set('pub', pub);
+  if (type) params.set('type', type);
+  if (status) params.set('status', status);
+  if (rep) params.set('rep', rep);
+  const d = await (await fetch(`/api/sales/accounts/${id}/contracts?${params}`)).json();
+  const container = document.getElementById('salesContracts');
+  container.innerHTML = `
+    <div style="font-size:12px;color:var(--text3);margin-bottom:6px;">${d.contracts.length} contract${d.contracts.length === 1 ? '' : 's'}</div>
+    <table>
+      <thead><tr>
+        <th class="${ctSort.col==='publication'?'sortable sorted':'sortable'}" onclick="sortCtCol('publication')">Publication<span class="sort-arrow">${ctSort.col==='publication'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${ctSort.col==='type_ad'?'sortable sorted':'sortable'}" onclick="sortCtCol('type_ad')">Type<span class="sort-arrow">${ctSort.col==='type_ad'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th>Rate Card</th>
+        <th class="${ctSort.col==='rate'?'sortable sorted':'sortable'}" onclick="sortCtCol('rate')">Rate<span class="sort-arrow">${ctSort.col==='rate'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${ctSort.col==='contract_start'?'sortable sorted':'sortable'}" onclick="sortCtCol('contract_start')">Start<span class="sort-arrow">${ctSort.col==='contract_start'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${ctSort.col==='contract_end'?'sortable sorted':'sortable'}" onclick="sortCtCol('contract_end')">End<span class="sort-arrow">${ctSort.col==='contract_end'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${ctSort.col==='status'?'sortable sorted':'sortable'}" onclick="sortCtCol('status')">Status<span class="sort-arrow">${ctSort.col==='status'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${ctSort.col==='rep1'?'sortable sorted':'sortable'}" onclick="sortCtCol('rep1')">Rep<span class="sort-arrow">${ctSort.col==='rep1'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+      </tr></thead>
+      <tbody>
+      ${d.contracts.map(ct => `
+        <tr class="clickable" onclick="openContractForm(${ct.id})">
+          <td>${esc(ct.publication || '')}</td>
+          <td>${esc(ct.type_ad || '')}</td>
+          <td>${esc(ct.rate_card_num || '')}</td>
+          <td>${esc(ct.rate || '')}</td>
+          <td style="white-space:nowrap;">${fmtSmDate(ct.contract_start)}</td>
+          <td style="white-space:nowrap;">${fmtSmDate(ct.contract_end)}</td>
+          <td>${esc(ct.status || '')}</td>
+          <td>${esc(ct.rep1 || '')}</td>
+        </tr>
+      `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function loadSalesInsertions(id, page) {
+  const pub = document.getElementById('insFilterPub')?.value || '';
+  const type = document.getElementById('insFilterType')?.value || '';
+  const rep = document.getElementById('insFilterRep')?.value || '';
+  const status = document.getElementById('insFilterStatus')?.value || '';
+  const params = new URLSearchParams({page, per_page: 25, sort: insSort.col, order: insSort.dir});
+  if (pub) params.set('pub', pub);
+  if (type) params.set('type', type);
+  if (rep) params.set('rep', rep);
+  if (status) params.set('status', status);
+  const d = await (await fetch(`/api/sales/accounts/${id}/insertions?${params}`)).json();
+  document.getElementById('salesInsertions').innerHTML = `
+    <table>
+      <thead><tr>
+        <th class="${insSort.col==='issue_date'?'sortable sorted':'sortable'}" onclick="sortInsCol('issue_date')">Issue Date<span class="sort-arrow">${insSort.col==='issue_date'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${insSort.col==='publication'?'sortable sorted':'sortable'}" onclick="sortInsCol('publication')">Publication<span class="sort-arrow">${insSort.col==='publication'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${insSort.col==='type_ad'?'sortable sorted':'sortable'}" onclick="sortInsCol('type_ad')">Type<span class="sort-arrow">${insSort.col==='type_ad'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${insSort.col==='ad_size'?'sortable sorted':'sortable'}" onclick="sortInsCol('ad_size')">Size<span class="sort-arrow">${insSort.col==='ad_size'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th>Color</th>
+        <th class="${insSort.col==='category'?'sortable sorted':'sortable'}" onclick="sortInsCol('category')">Category<span class="sort-arrow">${insSort.col==='category'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${insSort.col==='ad_cost'?'sortable sorted':'sortable'}" onclick="sortInsCol('ad_cost')" style="text-align:right;">Cost<span class="sort-arrow">${insSort.col==='ad_cost'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${insSort.col==='rep1'?'sortable sorted':'sortable'}" onclick="sortInsCol('rep1')">Rep<span class="sort-arrow">${insSort.col==='rep1'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th>Status</th>
+      </tr></thead>
+      <tbody>
+      ${d.insertions.map(i => `
+        <tr class="clickable" onclick="openInsertionForm(${i.page_history_id})">
+          <td style="white-space:nowrap;">${fmtSmDate(i.issue_date)}</td>
+          <td>${esc(i.publication || '')}</td>
+          <td>${esc(i.type_ad || '')}</td>
+          <td>${esc(i.ad_size || '')}</td>
+          <td>${esc(i.color || '')}</td>
+          <td>${esc(i.category || '')}</td>
+          <td style="text-align:right;font-weight:600;">${fmtMoney(i.ad_cost)}</td>
+          <td>${esc(i.rep1 || '')}</td>
+          <td>${i.canceled ? 'Canceled' : i.is_open ? '&#9679; Open' : 'Closed'}</td>
+        </tr>
+      `).join('')}
+      </tbody>
+    </table>
+  `;
+  const pag = document.getElementById('salesInsPagination');
+  if (d.total > 25) {
+    const start = ((d.page-1)*d.per_page)+1;
+    const end = Math.min(d.page*d.per_page, d.total);
+    pag.innerHTML = `
+      <span>Showing ${start}–${end} of ${d.total.toLocaleString()}</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-sm" ${d.page<=1?'disabled':''} onclick="loadSalesInsertions(${id},${d.page-1})">&#8592; Prev</button>
+        <span>Page ${d.page} / ${d.total_pages}</span>
+        <button class="btn btn-sm" ${d.page>=d.total_pages?'disabled':''} onclick="loadSalesInsertions(${id},${d.page+1})">Next &#8594;</button>
+      </div>`;
+  } else {
+    pag.innerHTML = d.total ? `<span>${d.total} insertion${d.total === 1 ? '' : 's'}</span>` : '';
+  }
+}
+
+function closeSalesDetail() {
+  document.getElementById('salesDetailView').style.display = 'none';
+  document.getElementById('salesView').style.display = '';
+}
+
+let _lookups = null;
+async function loadLookups() {
+  if (!_lookups) _lookups = await (await fetch('/api/sales/lookups')).json();
+  return _lookups;
+}
+
+function fillSelect(id, options, placeholder) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = `<option value="">${placeholder || 'Select...'}</option>`;
+  options.forEach(o => { sel.innerHTML += `<option value="${esc(o)}">${esc(o)}</option>`; });
+}
+
+function fillRepSelects(ids) {
+  if (!_lookups) return;
+  ids.forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select...</option>';
+    _lookups.reps.forEach(r => { sel.innerHTML += `<option value="${esc(r.rep_id)}">${esc(r.rep_id)} — ${esc(r.territory)}</option>`; });
+  });
+}
+
+function autoFillTerritory(repId, territoryId) {
+  if (!_lookups) return;
+  const rep = document.getElementById(repId).value;
+  const match = _lookups.reps.find(r => r.rep_id === rep);
+  document.getElementById(territoryId).value = match ? match.territory_id : '';
+}
+
+function filterByPub(pub, field) {
+  if (!_lookups) return [];
+  const map = field === 'types' ? _lookups.ad_types_by_pub
+            : field === 'sizes' ? _lookups.ad_sizes_by_pub
+            : field === 'colors' ? _lookups.ad_colors_by_pub
+            : field === 'cards' ? _lookups.rate_cards
+            : {};
+  return map[pub] || [];
+}
+
+function onCtPubChange() {
+  if (!_lookups) return;
+  const pub = document.getElementById('ctPub').value;
+  fillSelect('ctRateCard', filterByPub(pub, 'cards'), 'Select...');
+  fillSelect('ctType', filterByPub(pub, 'types'), 'Select...');
+}
+
+function onInsPubChange() {
+  if (!_lookups) return;
+  const pub = document.getElementById('insPub').value;
+  fillSelect('insType', filterByPub(pub, 'types'), 'Select...');
+  fillSelect('insSize', filterByPub(pub, 'sizes'), 'Select...');
+  fillSelect('insColor', filterByPub(pub, 'colors'), 'Select...');
+  const dates = (_lookups.issue_dates[pub] || []).map(d => d.replace(/ .+$/, '').replace(/(\d{2})\/(\d{2})\/(\d{2,4}).*/, (_, mo,dy,yr) => `${mo}/${dy}/${yr.slice(-2)}`));
+  fillSelect('insIssueDate', dates, 'Select...');
+}
+
+function lookupAdCost() {}
+
+async function populateFormDropdowns() {
+  const lk = await loadLookups();
+  const pubNames = lk.publications.map(p => p.publication);
+  fillSelect('ctPub', pubNames, 'Select...');
+  fillSelect('insPub', pubNames, 'Select...');
+  fillSelect('insCategory', lk.categories, 'Select...');
+  fillRepSelects(['ctRep1','ctRep2','insRep1']);
+}
+
+async function openContractForm(contractId, accountName) {
+  await populateFormDropdowns();
+  const m = document.getElementById('contractModal');
+  document.getElementById('ctModalId').value = contractId || '';
+  document.getElementById('ctModalAccount').value = accountName || currentSalesAccountName;
+  document.getElementById('ctDeleteBtn').style.display = contractId ? '' : 'none';
+
+  if (contractId) {
+    document.getElementById('contractModalTitle').textContent = 'Edit Contract';
+    const d = await (await fetch(`/api/sales/contracts/${contractId}`)).json();
+    const ct = d.contract;
+    document.getElementById('ctPub').value = ct.publication || '';
+    onCtPubChange();
+    document.getElementById('ctType').value = ct.type_ad || '';
+    document.getElementById('ctRateCard').value = ct.rate_card_num || '';
+    document.getElementById('ctRate').value = ct.rate || '';
+    document.getElementById('ctStart').value = smDateToIso(ct.contract_start);
+    document.getElementById('ctEnd').value = smDateToIso(ct.contract_end);
+    document.getElementById('ctStatus').value = ct.status || 'Active';
+    document.getElementById('ctTerms').value = ct.terms || '';
+    document.getElementById('ctAgency').value = ct.agency_name || '';
+    document.getElementById('ctDiscount').value = ct.agency_discount ? (ct.agency_discount * 100).toFixed(0) : '';
+    document.getElementById('ctBill').value = ct.bill_name || '';
+    document.getElementById('ctCreditHold').value = ct.credit_hold ? '1' : '0';
+    document.getElementById('ctRep1').value = ct.rep1 || '';
+    autoFillTerritory('ctRep1','ctTerritory1');
+    document.getElementById('ctRep2').value = ct.rep2 || '';
+    autoFillTerritory('ctRep2','ctTerritory2');
+    document.getElementById('ctNotes').value = ct.notes || '';
+  } else {
+    document.getElementById('contractModalTitle').textContent = 'New Contract';
+    ['ctPub','ctType','ctRateCard','ctRate','ctStart','ctEnd','ctTerms','ctAgency',
+     'ctDiscount','ctBill','ctRep1','ctTerritory1','ctRep2','ctTerritory2','ctNotes']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ctStatus').value = 'Active';
+    document.getElementById('ctCreditHold').value = '0';
+  }
+  m.classList.add('open');
+}
+
+function smDateToIso(d) {
+  if (!d) return '';
+  const m = d.match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
+  if (!m) return '';
+  const yr = m[3].length === 2 ? (parseInt(m[3]) > 50 ? '19' + m[3] : '20' + m[3]) : m[3];
+  return `${yr}-${m[1]}-${m[2]}`;
+}
+
+function isoToSmDate(d) {
+  if (!d) return '';
+  const parts = d.split('-');
+  if (parts.length !== 3) return d;
+  return `${parts[1]}/${parts[2]}/${parts[0].slice(-2)}`;
+}
+
+async function saveContract() {
+  const id = document.getElementById('ctModalId').value;
+  const data = {
+    account_name: document.getElementById('ctModalAccount').value,
+    publication: document.getElementById('ctPub').value,
+    type_ad: document.getElementById('ctType').value,
+    rate_card_num: document.getElementById('ctRateCard').value,
+    rate: document.getElementById('ctRate').value,
+    contract_start: isoToSmDate(document.getElementById('ctStart').value),
+    contract_end: isoToSmDate(document.getElementById('ctEnd').value),
+    status: document.getElementById('ctStatus').value,
+    terms: document.getElementById('ctTerms').value,
+    agency_name: document.getElementById('ctAgency').value,
+    agency_discount: document.getElementById('ctDiscount').value ? parseFloat(document.getElementById('ctDiscount').value) / 100 : 0,
+    bill_name: document.getElementById('ctBill').value,
+    credit_hold: parseInt(document.getElementById('ctCreditHold').value),
+    rep1: document.getElementById('ctRep1').value,
+    territory1: document.getElementById('ctTerritory1').value,
+    rep2: document.getElementById('ctRep2').value,
+    territory2: document.getElementById('ctTerritory2').value,
+    notes: document.getElementById('ctNotes').value,
+  };
+  const url = id ? `/api/sales/contracts/${id}` : '/api/sales/contracts';
+  const method = id ? 'PUT' : 'POST';
+  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  document.getElementById('contractModal').classList.remove('open');
+  openSalesDetail(currentSalesAccountId);
+}
+
+async function deleteContract() {
+  const id = document.getElementById('ctModalId').value;
+  if (!id || !confirm('Delete this contract?')) return;
+  await fetch(`/api/sales/contracts/${id}`, { method: 'DELETE' });
+  document.getElementById('contractModal').classList.remove('open');
+  openSalesDetail(currentSalesAccountId);
+}
+
+async function openInsertionForm(insertionId, accountName) {
+  await populateFormDropdowns();
+  const m = document.getElementById('insertionModal');
+  document.getElementById('insModalId').value = insertionId || '';
+  document.getElementById('insModalAccount').value = accountName || currentSalesAccountName;
+  document.getElementById('insDeleteBtn').style.display = insertionId ? '' : 'none';
+
+  if (insertionId) {
+    document.getElementById('insertionModalTitle').textContent = 'Edit Insertion';
+    const d = await (await fetch(`/api/sales/insertions/${insertionId}`)).json();
+    const ins = d.insertion;
+    document.getElementById('insPub').value = ins.publication || '';
+    onInsPubChange();
+    const rawDate = (ins.issue_date || '').replace(/ .+$/, '');
+    document.getElementById('insIssueDate').value = rawDate;
+    document.getElementById('insType').value = ins.type_ad || '';
+    document.getElementById('insSize').value = ins.ad_size || '';
+    document.getElementById('insColor').value = ins.color || '';
+    document.getElementById('insCategory').value = ins.category || '';
+    document.getElementById('insCost').value = ins.ad_cost || '';
+    document.getElementById('insNet').value = ins.net_cost || '';
+    document.getElementById('insGross').value = ins.gross_cost || '';
+    document.getElementById('insContract').value = ins.contract_num || '';
+    document.getElementById('insRep1').value = ins.rep1 || '';
+    autoFillTerritory('insRep1','insTerritory1');
+    document.getElementById('insHeadline').value = ins.headline || '';
+    document.getElementById('insPosition').value = ins.position_request || '';
+    document.getElementById('insPlacement').value = ins.placement || '';
+    document.getElementById('insUrl').value = ins.url_address || '';
+    document.getElementById('insStatus').value = ins.canceled ? 'canceled' : ins.is_open ? 'open' : 'closed';
+    document.getElementById('insComments').value = ins.comments || '';
+  } else {
+    document.getElementById('insertionModalTitle').textContent = 'New Insertion';
+    ['insPub','insIssueDate','insType','insSize','insColor','insCategory',
+     'insCost','insNet','insGross','insContract','insRep1','insTerritory1',
+     'insHeadline','insPosition','insPlacement','insUrl','insComments']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('insStatus').value = 'open';
+  }
+  m.classList.add('open');
+}
+
+async function saveInsertion() {
+  const id = document.getElementById('insModalId').value;
+  const statusVal = document.getElementById('insStatus').value;
+  const data = {
+    account_name: document.getElementById('insModalAccount').value,
+    publication: document.getElementById('insPub').value,
+    issue_date: document.getElementById('insIssueDate').value,
+    type_ad: document.getElementById('insType').value,
+    ad_size: document.getElementById('insSize').value,
+    color: document.getElementById('insColor').value,
+    category: document.getElementById('insCategory').value,
+    ad_cost: parseFloat(document.getElementById('insCost').value) || 0,
+    net_cost: parseFloat(document.getElementById('insNet').value) || 0,
+    gross_cost: parseFloat(document.getElementById('insGross').value) || 0,
+    contract_num: document.getElementById('insContract').value,
+    rep1: document.getElementById('insRep1').value,
+    territory1: document.getElementById('insTerritory1').value,
+    headline: document.getElementById('insHeadline').value,
+    position_request: document.getElementById('insPosition').value,
+    placement: document.getElementById('insPlacement').value,
+    url_address: document.getElementById('insUrl').value,
+    is_open: statusVal === 'open' ? 1 : 0,
+    canceled: statusVal === 'canceled' ? 1 : 0,
+    comments: document.getElementById('insComments').value,
+  };
+  const url = id ? `/api/sales/insertions/${id}` : '/api/sales/insertions';
+  const method = id ? 'PUT' : 'POST';
+  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  document.getElementById('insertionModal').classList.remove('open');
+  openSalesDetail(currentSalesAccountId);
+}
+
+async function deleteInsertion() {
+  const id = document.getElementById('insModalId').value;
+  if (!id || !confirm('Delete this insertion?')) return;
+  await fetch(`/api/sales/insertions/${id}`, { method: 'DELETE' });
+  document.getElementById('insertionModal').classList.remove('open');
+  openSalesDetail(currentSalesAccountId);
+}
+
+// ══════════════════════════════════════
+// COMPANY ACTIVITY TIMELINE
+// ══════════════════════════════════════
+function buildCompanyActivityTimeline(data, companyId) {
+  let html = '<div class="activity-filters">';
+  html += `<span class="act-filter-btn active" onclick="filterCompanyActs('${companyId}','',this)">All (${data.total})</span>`;
+  const typeOrder = ['emails','calls','meetings','notes','tasks'];
+  typeOrder.forEach(t => {
+    const cnt = data.type_counts?.[t];
+    if (cnt) html += `<span class="act-filter-btn" onclick="filterCompanyActs('${companyId}','${t}',this)">${t} (${cnt})</span>`;
+  });
+  html += '</div><div id="companyActivityList">';
+  data.activities.forEach(a => { html += renderActivityItem(a); });
+  html += '</div>';
+  if (data.total > data.activities.length) {
+    html += `<button class="load-more-btn" id="companyLoadMoreBtn" onclick="loadMoreCompanyActs('${companyId}','',2)">
+      Load more (${data.total - data.activities.length} remaining)</button>`;
+  }
+  return html;
+}
+
+async function filterCompanyActs(companyId, type, btn) {
+  document.querySelectorAll('#companyActivityAccBody .act-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const params = new URLSearchParams({ per_page: 25 });
+  if (type) params.set('type', type);
+  const data = await (await fetch(`/api/companies/${companyId}/activities?${params}`)).json();
+  document.getElementById('companyActivityList').innerHTML = data.activities.map(renderActivityItem).join('');
+  const existing = document.getElementById('companyLoadMoreBtn');
+  if (existing) existing.remove();
+  if (data.total > data.activities.length) {
+    const btn2 = document.createElement('button');
+    btn2.className = 'load-more-btn'; btn2.id = 'companyLoadMoreBtn';
+    btn2.textContent = `Load more (${data.total - data.activities.length} remaining)`;
+    btn2.onclick = () => loadMoreCompanyActs(companyId, type, 2);
+    document.getElementById('companyActivityAccBody').appendChild(btn2);
+  }
+}
+
+async function loadMoreCompanyActs(companyId, type, page) {
+  const params = new URLSearchParams({ page, per_page: 25 });
+  if (type) params.set('type', type);
+  const data = await (await fetch(`/api/companies/${companyId}/activities?${params}`)).json();
+  const list = document.getElementById('companyActivityList');
+  data.activities.forEach(a => { list.insertAdjacentHTML('beforeend', renderActivityItem(a)); });
+  const existing = document.getElementById('companyLoadMoreBtn');
+  if (existing) existing.remove();
+  const loaded = page * 25;
+  if (data.total > loaded) {
+    const btn = document.createElement('button');
+    btn.className = 'load-more-btn'; btn.id = 'companyLoadMoreBtn';
+    btn.textContent = `Load more (${data.total - loaded} remaining)`;
+    btn.onclick = () => loadMoreCompanyActs(companyId, type, page + 1);
+    document.getElementById('companyActivityAccBody').appendChild(btn);
+  }
+}
+
+// ══════════════════════════════════════
+// ADD ACTIVITY
+// ══════════════════════════════════════
+function openAddActivity(contactId, companyId) {
+  document.getElementById('actModalContactId').value = contactId || '';
+  document.getElementById('actModalCompanyId').value = companyId || '';
+  document.getElementById('actModalType').value = 'notes';
+  document.getElementById('actModalSubject').value = '';
+  document.getElementById('actModalBody').value = '';
+  document.getElementById('addActivityModal').classList.add('open');
+  document.getElementById('actModalSubject').focus();
+}
+
+async function submitActivity() {
+  const contactId = document.getElementById('actModalContactId').value || null;
+  const companyId = document.getElementById('actModalCompanyId').value || null;
+  const type = document.getElementById('actModalType').value;
+  const subject = document.getElementById('actModalSubject').value.trim();
+  const body = document.getElementById('actModalBody').value.trim();
+  if (!subject) { alert('Subject is required'); return; }
+
+  await fetch('/api/activities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contact_id: contactId, company_id: companyId, type, subject, body, created_by: 'User' })
+  });
+
+  document.getElementById('addActivityModal').classList.remove('open');
+
+  if (contactId) {
+    openContact(contactId);
+  } else if (companyId) {
+    openCompany(companyId);
+  }
+}
+
+// ══════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════
+let adminInited = false;
+let adminAuditPage = 1;
+
+async function initAdmin() {
+  if (adminInited) return;
+  adminInited = true;
+  loadAdminLookup('publications');
+}
+
+function switchAdminPanel(el, panelId) {
+  document.querySelectorAll('.admin-sidebar a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.admin-panel-content').forEach(p => p.style.display = 'none');
+  document.getElementById(panelId).style.display = '';
+
+  if (panelId === 'adminIssueCalendar') loadAdminIssueCalendarInit();
+  else if (panelId === 'adminRateCards') loadAdminRateCardsInit();
+  else if (panelId === 'adminTargets') loadAdminTargetsInit();
+  else if (panelId === 'adminUsers') loadAdminUsers();
+  else if (panelId === 'adminImportExport') loadAdminImportExport();
+  else if (panelId === 'adminAuditLog') { adminAuditPage = 1; loadAdminAudit(); }
+  else if (panelId === 'adminHygiene') loadAdminDuplicates();
+  else if (panelId === 'adminSettings') loadAdminSettings();
+  else if (panelId === 'adminBackup') loadAdminDbStats();
+  return false;
+}
+
+// ── Lookup Tables ──
+
+async function loadAdminLookup(key) {
+  const d = await (await fetch(`/api/admin/lookups/${key}`)).json();
+  const cfg = d.config;
+  const rows = d.rows;
+  const container = document.getElementById('adminLookupTable');
+  if (!rows.length) {
+    container.innerHTML = '<p style="color:var(--text3);padding:20px;">No rows found.</p>';
+    return;
+  }
+  const cols = cfg.cols;
+  let html = `<table><thead><tr>${cols.map(c => `<th>${formatLabel(c)}</th>`).join('')}<th style="width:60px;"></th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    const pkVal = r[cfg.pk];
+    html += '<tr>' + cols.map(c => `<td>${esc(String(r[c] ?? ''))}</td>`).join('') +
+      `<td><button class="btn btn-sm btn-danger" onclick="deleteLookupRow('${key}','${esc(String(pkVal))}')">&#10005;</button></td></tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+async function addLookupRow() {
+  const key = document.getElementById('adminLookupSelect').value;
+  const d = await (await fetch(`/api/admin/lookups/${key}`)).json();
+  const cols = d.config.cols;
+  const data = {};
+  for (const c of cols) {
+    const val = prompt(`Enter ${formatLabel(c)}:`);
+    if (val === null) return;
+    data[c] = val;
+  }
+  await fetch(`/api/admin/lookups/${key}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+  });
+  loadAdminLookup(key);
+}
+
+async function deleteLookupRow(key, pkVal) {
+  if (!confirm('Delete this row?')) return;
+  await fetch(`/api/admin/lookups/${key}/${encodeURIComponent(pkVal)}`, { method: 'DELETE' });
+  loadAdminLookup(key);
+}
+
+// ── Issue Calendar ──
+
+let issueCalInited = false;
+async function loadAdminIssueCalendarInit() {
+  if (!issueCalInited) {
+    issueCalInited = true;
+    const lk = await loadLookups();
+    const sel = document.getElementById('adminIssuePub');
+    sel.innerHTML = '<option value="">All Publications</option>';
+    lk.publications.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  }
+  loadAdminIssueDates();
+}
+
+async function loadAdminIssueDates() {
+  const pub = document.getElementById('adminIssuePub').value;
+  const params = pub ? `?pub=${encodeURIComponent(pub)}` : '';
+  const rows = await (await fetch('/api/admin/issue-dates' + params)).json();
+  const container = document.getElementById('adminIssueDatesTable');
+  if (!rows.length) {
+    container.innerHTML = '<p style="color:var(--text3);padding:20px;">No issue dates found.</p>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Publication</th><th>Cover Date</th><th>Closing Date</th><th style="width:60px;"></th></tr></thead><tbody>';
+  rows.forEach(r => {
+    html += `<tr><td>${esc(r.publication)}</td><td>${esc(r.cover_date)}</td><td>${esc(r.closing_date || '')}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteIssueDate(${r.id})">&#10005;</button></td></tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function openAddIssueModal() {
+  loadLookups().then(lk => {
+    const sel = document.getElementById('adminIssuePubSelect');
+    sel.innerHTML = '<option value="">Select...</option>';
+    lk.publications.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  });
+  document.getElementById('adminIssueCover').value = '';
+  document.getElementById('adminIssueClosing').value = '';
+  document.getElementById('adminIssueModal').classList.add('open');
+}
+
+async function saveAdminIssueDate() {
+  const data = {
+    publication: document.getElementById('adminIssuePubSelect').value,
+    cover_date: document.getElementById('adminIssueCover').value,
+    closing_date: document.getElementById('adminIssueClosing').value,
+  };
+  if (!data.publication || !data.cover_date) { alert('Publication and cover date required.'); return; }
+  await fetch('/api/admin/issue-dates', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+  });
+  document.getElementById('adminIssueModal').classList.remove('open');
+  loadAdminIssueDates();
+}
+
+async function deleteIssueDate(id) {
+  if (!confirm('Delete this issue date?')) return;
+  await fetch(`/api/admin/issue-dates/${id}`, { method: 'DELETE' });
+  loadAdminIssueDates();
+}
+
+function openBulkIssueModal() {
+  loadLookups().then(lk => {
+    const sel = document.getElementById('bulkIssuePub');
+    sel.innerHTML = '<option value="">Select...</option>';
+    lk.publications.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  });
+  document.getElementById('bulkIssueYear').value = '';
+  document.getElementById('adminBulkIssueModal').classList.add('open');
+}
+
+async function doBulkCreateIssues() {
+  const pub = document.getElementById('bulkIssuePub').value;
+  const yr = document.getElementById('bulkIssueYear').value.trim();
+  if (!pub || !yr) { alert('Select a publication and enter a year.'); return; }
+  const dates = [];
+  for (let m = 1; m <= 12; m++) {
+    const mm = String(m).padStart(2, '0');
+    dates.push({ cover_date: `${mm}/01/${yr}`, closing_date: '' });
+  }
+  const res = await fetch('/api/admin/issue-dates/bulk', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ publication: pub, dates })
+  });
+  const d = await res.json();
+  alert(`Created ${d.created} new issue dates.`);
+  document.getElementById('adminBulkIssueModal').classList.remove('open');
+  loadAdminIssueDates();
+}
+
+// ── Rate Cards ──
+
+let rcInited = false;
+async function loadAdminRateCardsInit() {
+  if (!rcInited) {
+    rcInited = true;
+    const lk = await loadLookups();
+    const sel = document.getElementById('adminRcPub');
+    sel.innerHTML = '<option value="">Select Publication...</option>';
+    lk.publications.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  }
+}
+
+async function loadAdminRateCards() {
+  const pub = document.getElementById('adminRcPub').value;
+  const rc = document.getElementById('adminRcNum').value;
+  if (!pub) {
+    document.getElementById('adminRateCardsTable').innerHTML = '<p style="color:var(--text3);padding:20px;">Select a publication to view rate cards.</p>';
+    return;
+  }
+  const lk = await loadLookups();
+  const rcs = lk.rate_cards[pub] || [];
+  const rcSel = document.getElementById('adminRcNum');
+  const curVal = rcSel.value;
+  rcSel.innerHTML = '<option value="">All Rate Cards</option>';
+  rcs.forEach(r => { rcSel.innerHTML += `<option value="${esc(r)}" ${r === curVal ? 'selected' : ''}>${esc(r)}</option>`; });
+
+  const params = new URLSearchParams({ pub });
+  if (rc) params.set('rc', rc);
+  const rows = await (await fetch('/api/admin/rate-cards?' + params)).json();
+  const container = document.getElementById('adminRateCardsTable');
+  if (!rows.length) {
+    container.innerHTML = '<p style="color:var(--text3);padding:20px;">No rate card entries found.</p>';
+    return;
+  }
+  let html = `<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">${rows.length} entries</div>`;
+  html += '<table><thead><tr><th>Rate Card</th><th>Ad Size</th><th>Type</th><th>Color</th><th>Rate</th><th style="text-align:right;">Cost</th><th style="width:60px;"></th></tr></thead><tbody>';
+  rows.forEach(r => {
+    html += `<tr>
+      <td>${esc(r.rate_card_num)}</td><td>${esc(r.ad_size)}</td><td>${esc(r.type_ad)}</td>
+      <td>${esc(r.color)}</td><td>${r.rate || ''}</td>
+      <td style="text-align:right;font-weight:600;">$${(r.ad_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteRateCard(${r.id})">&#10005;</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function openAddRcModal() {
+  loadLookups().then(lk => {
+    const sel = document.getElementById('adminRcPubSelect');
+    sel.innerHTML = '<option value="">Select...</option>';
+    lk.publications.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  });
+  ['adminRcNumInput','adminRcSize','adminRcType','adminRcColor','adminRcRate','adminRcCost'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('adminRcModal').classList.add('open');
+}
+
+async function saveAdminRateCard() {
+  const data = {
+    publication: document.getElementById('adminRcPubSelect').value,
+    rate_card_num: document.getElementById('adminRcNumInput').value,
+    ad_size: document.getElementById('adminRcSize').value,
+    type_ad: document.getElementById('adminRcType').value,
+    color: document.getElementById('adminRcColor').value,
+    rate: parseInt(document.getElementById('adminRcRate').value) || 0,
+    ad_cost: parseFloat(document.getElementById('adminRcCost').value) || 0,
+  };
+  if (!data.publication || !data.rate_card_num) { alert('Publication and rate card # required.'); return; }
+  await fetch('/api/admin/rate-cards', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+  });
+  document.getElementById('adminRcModal').classList.remove('open');
+  _lookups = null;
+  loadAdminRateCards();
+}
+
+async function deleteRateCard(id) {
+  if (!confirm('Delete this rate card entry?')) return;
+  await fetch(`/api/admin/rate-cards/${id}`, { method: 'DELETE' });
+  _lookups = null;
+  loadAdminRateCards();
+}
+
+function openCloneRcModal() {
+  loadLookups().then(lk => {
+    const sel = document.getElementById('cloneRcPub');
+    sel.innerHTML = '<option value="">Select...</option>';
+    lk.publications.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+    sel.onchange = () => {
+      const pub = sel.value;
+      const rcs = lk.rate_cards[pub] || [];
+      const srcSel = document.getElementById('cloneRcSource');
+      srcSel.innerHTML = '<option value="">Select...</option>';
+      rcs.forEach(r => { srcSel.innerHTML += `<option value="${esc(r)}">${esc(r)}</option>`; });
+    };
+  });
+  document.getElementById('cloneRcNew').value = '';
+  document.getElementById('cloneRcPct').value = '0';
+  document.getElementById('adminCloneRcModal').classList.add('open');
+}
+
+async function doCloneRateCard() {
+  const data = {
+    source_publication: document.getElementById('cloneRcPub').value,
+    source_rate_card: document.getElementById('cloneRcSource').value,
+    new_rate_card: document.getElementById('cloneRcNew').value.trim(),
+    price_adjustment_pct: parseFloat(document.getElementById('cloneRcPct').value) || 0,
+  };
+  if (!data.source_publication || !data.source_rate_card || !data.new_rate_card) {
+    alert('All fields required.'); return;
+  }
+  const res = await fetch('/api/admin/rate-cards/clone', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+  });
+  const d = await res.json();
+  if (d.error) { alert(d.error); return; }
+  alert(`Cloned ${d.created} entries.`);
+  document.getElementById('adminCloneRcModal').classList.remove('open');
+  _lookups = null;
+  loadAdminRateCards();
+}
+
+// ── Sales Targets ──
+
+let targetsInited = false;
+async function loadAdminTargetsInit() {
+  if (!targetsInited) {
+    targetsInited = true;
+    const yearSel = document.getElementById('adminTargetYear');
+    const curYear = new Date().getFullYear();
+    for (let y = curYear + 2; y >= curYear - 5; y--) {
+      yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+    }
+  }
+  loadAdminTargets();
+}
+
+async function loadAdminTargets() {
+  const year = document.getElementById('adminTargetYear').value;
+  const params = year ? `?year=${year}` : '';
+  const rows = await (await fetch('/api/admin/targets' + params)).json();
+  const container = document.getElementById('adminTargetsTable');
+  if (!rows.length) {
+    container.innerHTML = '<p style="color:var(--text3);padding:20px;">No sales targets set.</p>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Year</th><th>Rep</th><th>Publication</th><th style="text-align:right;">Target</th><th style="width:80px;"></th></tr></thead><tbody>';
+  rows.forEach(r => {
+    html += `<tr>
+      <td>${esc(r.year)}</td><td>${esc(r.rep_id || 'All')}</td><td>${esc(r.publication || 'All')}</td>
+      <td style="text-align:right;font-weight:600;">$${(r.target_amount || 0).toLocaleString()}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteTarget(${r.id})">&#10005;</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+async function openAddTargetModal() {
+  const lk = await loadLookups();
+  const repSel = document.getElementById('adminTargetRep');
+  repSel.innerHTML = '<option value="">All Reps</option>';
+  lk.reps.forEach(r => { repSel.innerHTML += `<option value="${esc(r.rep_id)}">${esc(r.rep_id)}</option>`; });
+  const pubSel = document.getElementById('adminTargetPub');
+  pubSel.innerHTML = '<option value="">All Publications</option>';
+  lk.publications.forEach(p => { pubSel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  document.getElementById('adminTargetId').value = '';
+  document.getElementById('adminTargetYear2').value = new Date().getFullYear() + 1;
+  document.getElementById('adminTargetAmount').value = '';
+  document.getElementById('adminTargetModalTitle').textContent = 'Add Sales Target';
+  document.getElementById('adminTargetModal').classList.add('open');
+}
+
+async function saveAdminTarget() {
+  const id = document.getElementById('adminTargetId').value;
+  const data = {
+    year: document.getElementById('adminTargetYear2').value,
+    rep_id: document.getElementById('adminTargetRep').value,
+    publication: document.getElementById('adminTargetPub').value,
+    target_amount: parseFloat(document.getElementById('adminTargetAmount').value) || 0,
+  };
+  if (!data.year || !data.target_amount) { alert('Year and amount required.'); return; }
+  const url = id ? `/api/admin/targets/${id}` : '/api/admin/targets';
+  const method = id ? 'PUT' : 'POST';
+  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  document.getElementById('adminTargetModal').classList.remove('open');
+  loadAdminTargets();
+}
+
+async function deleteTarget(id) {
+  if (!confirm('Delete this target?')) return;
+  await fetch(`/api/admin/targets/${id}`, { method: 'DELETE' });
+  loadAdminTargets();
+}
+
+// ── Users ──
+
+async function loadAdminUsers() {
+  const rows = await (await fetch('/api/admin/users')).json();
+  const container = document.getElementById('adminUsersTable');
+  let html = '<table><thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th>Created</th><th style="width:100px;"></th></tr></thead><tbody>';
+  rows.forEach(r => {
+    const roleClass = `role-${r.role}`;
+    html += `<tr>
+      <td style="font-weight:600;">${esc(r.username)}</td>
+      <td>${esc(r.display_name)}</td>
+      <td>${esc(r.email || '')}</td>
+      <td><span class="role-badge ${roleClass}">${r.role.replace('_',' ')}</span></td>
+      <td>${r.active ? '&#9679; Yes' : 'No'}</td>
+      <td style="white-space:nowrap;">${r.created_at ? formatDate(r.created_at) : ''}</td>
+      <td>
+        <button class="btn btn-sm" onclick="editAdminUser(${r.id})">Edit</button>
+        ${r.username !== 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteAdminUser(${r.id})" style="margin-left:4px;">&#10005;</button>` : ''}
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function openAddUserModal() {
+  document.getElementById('adminUserId').value = '';
+  ['adminUserUsername','adminUserName','adminUserEmail','adminUserPassword'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('adminUserRole').value = 'viewer';
+  document.getElementById('adminUserActive').value = '1';
+  document.getElementById('adminUserUsername').disabled = false;
+  document.getElementById('adminUserModalTitle').textContent = 'Add User';
+  document.getElementById('adminUserModal').classList.add('open');
+}
+
+async function editAdminUser(id) {
+  const rows = await (await fetch('/api/admin/users')).json();
+  const u = rows.find(r => r.id === id);
+  if (!u) return;
+  document.getElementById('adminUserId').value = id;
+  document.getElementById('adminUserUsername').value = u.username;
+  document.getElementById('adminUserUsername').disabled = true;
+  document.getElementById('adminUserName').value = u.display_name;
+  document.getElementById('adminUserEmail').value = u.email || '';
+  document.getElementById('adminUserRole').value = u.role;
+  document.getElementById('adminUserActive').value = u.active ? '1' : '0';
+  document.getElementById('adminUserPassword').value = '';
+  document.getElementById('adminUserModalTitle').textContent = 'Edit User';
+  document.getElementById('adminUserModal').classList.add('open');
+}
+
+async function saveAdminUser() {
+  const id = document.getElementById('adminUserId').value;
+  const data = {
+    username: document.getElementById('adminUserUsername').value.trim(),
+    display_name: document.getElementById('adminUserName').value.trim(),
+    email: document.getElementById('adminUserEmail').value.trim(),
+    role: document.getElementById('adminUserRole').value,
+    active: parseInt(document.getElementById('adminUserActive').value),
+  };
+  const pw = document.getElementById('adminUserPassword').value;
+  if (pw) data.password = pw;
+  if (!id && !pw) { alert('Password required for new users.'); return; }
+  if (!data.username) { alert('Username required.'); return; }
+  const url = id ? `/api/admin/users/${id}` : '/api/admin/users';
+  const method = id ? 'PUT' : 'POST';
+  const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  const d = await res.json();
+  if (d.error) { alert(d.error); return; }
+  document.getElementById('adminUserModal').classList.remove('open');
+  loadAdminUsers();
+}
+
+async function deleteAdminUser(id) {
+  if (!confirm('Delete this user?')) return;
+  const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+  const d = await res.json();
+  if (d.error) { alert(d.error); return; }
+  loadAdminUsers();
+}
+
+// ── Import / Export ──
+
+function loadAdminImportExport() {
+  const tables = {
+    contacts: 'Contacts', companies: 'Companies', sales_accounts: 'Sales Accounts',
+    sales_contracts: 'Sales Contracts', sales_insertions: 'Sales Insertions',
+    sales_contacts: 'Sales Contacts', rate_cards: 'Rate Cards',
+    issue_dates: 'Issue Dates', reps: 'Reps', publications: 'Publications', categories: 'Categories'
+  };
+  const container = document.getElementById('adminExportBtns');
+  container.innerHTML = Object.entries(tables).map(([key, label]) =>
+    `<button class="btn btn-sm" onclick="window.open('/api/admin/export/${key}','_blank')" style="justify-content:flex-start;">&#8615; ${label}</button>`
+  ).join('');
+}
+
+async function doAdminImport() {
+  const fileInput = document.getElementById('adminImportFile');
+  const file = fileInput.files[0];
+  if (!file) return;
+  const target = document.getElementById('adminImportTarget').value;
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`/api/admin/import/${target}`, { method: 'POST', body: form });
+  const d = await res.json();
+  document.getElementById('adminImportResult').innerHTML = d.error
+    ? `<div style="color:var(--red);font-size:13px;">${esc(d.error)}</div>`
+    : `<div style="color:var(--green);font-size:13px;font-weight:600;">Imported ${d.imported} rows${d.errors ? `, ${d.errors} errors` : ''}</div>`;
+  fileInput.value = '';
+}
+
+// ── Audit Log ──
+
+async function loadAdminAudit() {
+  const type = document.getElementById('adminAuditType').value;
+  const action = document.getElementById('adminAuditAction').value;
+  const params = new URLSearchParams({ page: adminAuditPage, per_page: 50 });
+  if (type) params.set('type', type);
+  if (action) params.set('action', action);
+  const d = await (await fetch('/api/admin/audit-log?' + params)).json();
+  const container = document.getElementById('adminAuditTable');
+
+  const types = [...new Set(d.entries.map(e => e.entity_type).filter(Boolean))];
+  const typeSel = document.getElementById('adminAuditType');
+  if (typeSel.options.length <= 1) {
+    types.forEach(t => { typeSel.innerHTML += `<option value="${esc(t)}">${esc(t)}</option>`; });
+  }
+
+  if (!d.entries.length) {
+    container.innerHTML = '<p style="color:var(--text3);padding:20px;">No audit entries.</p>';
+    document.getElementById('adminAuditPagination').innerHTML = '';
+    return;
+  }
+  let html = '<table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Type</th><th>ID</th><th>Details</th></tr></thead><tbody>';
+  d.entries.forEach(e => {
+    let detail = '';
+    if (e.details) {
+      try { detail = JSON.stringify(JSON.parse(e.details)).slice(0, 80); } catch { detail = String(e.details).slice(0, 80); }
+    }
+    html += `<tr>
+      <td style="white-space:nowrap;">${formatDate(e.timestamp)}</td>
+      <td>${esc(e.user || '')}</td>
+      <td><span class="badge badge-${e.action === 'delete' ? 'notes' : 'emails'}">${esc(e.action)}</span></td>
+      <td>${esc(e.entity_type || '')}</td>
+      <td>${esc(e.entity_id || '')}</td>
+      <td class="audit-detail" title="${esc(detail)}">${esc(detail)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  const pag = document.getElementById('adminAuditPagination');
+  if (d.total_pages > 1) {
+    pag.innerHTML = `<span>Page ${d.page} / ${d.total_pages} (${d.total} entries)</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-sm" ${d.page<=1?'disabled':''} onclick="adminAuditPage=${d.page-1};loadAdminAudit()">&#8592; Prev</button>
+        <button class="btn btn-sm" ${d.page>=d.total_pages?'disabled':''} onclick="adminAuditPage=${d.page+1};loadAdminAudit()">Next &#8594;</button>
+      </div>`;
+  } else {
+    pag.innerHTML = `<span>${d.total} entries</span>`;
+  }
+}
+
+// ── Data Hygiene ──
+
+async function loadAdminDuplicates() {
+  const entity = document.getElementById('adminDupEntity').value;
+  const d = await (await fetch(`/api/admin/duplicates?entity=${entity}`)).json();
+  const container = document.getElementById('adminDuplicatesTable');
+  if (!d.duplicates.length) {
+    container.innerHTML = '<p style="color:var(--green);padding:20px;font-weight:600;">No duplicates found!</p>';
+    return;
+  }
+  let html = `<p style="font-size:13px;color:var(--text2);margin-bottom:12px;">${d.duplicates.length} duplicate groups found</p>`;
+  d.duplicates.forEach(g => {
+    html += `<div class="dup-group"><h4>${esc(g.name)} (${g.count} records)</h4><table style="font-size:12px;">`;
+    g.records.forEach(r => {
+      const vals = Object.entries(r).map(([k,v]) => `${k}: ${v}`).join(' | ');
+      html += `<tr><td style="padding:4px 8px;">${esc(vals)}</td></tr>`;
+    });
+    html += '</table></div>';
+  });
+  container.innerHTML = html;
+}
+
+// ── Settings ──
+
+async function loadAdminSettings() {
+  const settings = await (await fetch('/api/admin/settings')).json();
+  document.getElementById('settingAppName').value = settings.app_name || 'DevIQ';
+  document.getElementById('settingDefaultRep').value = settings.default_rep || '';
+  document.getElementById('settingCompanyName').value = settings.company_name || 'ASLA';
+  document.getElementById('settingFYStart').value = settings.fy_start_month || '1';
+  document.getElementById('settingNotes').value = settings.notes || '';
+}
+
+async function saveAdminSettings() {
+  const data = {
+    app_name: document.getElementById('settingAppName').value,
+    default_rep: document.getElementById('settingDefaultRep').value,
+    company_name: document.getElementById('settingCompanyName').value,
+    fy_start_month: document.getElementById('settingFYStart').value,
+    notes: document.getElementById('settingNotes').value,
+  };
+  await fetch('/api/admin/settings', {
+    method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+  });
+  alert('Settings saved.');
+}
+
+// ── Database ──
+
+async function loadAdminDbStats() {
+  const stats = await (await fetch('/api/admin/db-stats')).json();
+  const container = document.getElementById('adminDbStats');
+  const labels = {
+    contacts: 'Contacts', companies: 'Companies', activities: 'Activities',
+    sm_companies: 'Sales Accounts', sm_contracts: 'Contracts', sm_page_history: 'Insertions',
+    sm_directory: 'Sales Contacts', sm_rate_card: 'Rate Cards', sm_issue_dates: 'Issue Dates',
+    sm_publications: 'Publications', sm_reps: 'Reps', sm_product_categories: 'Categories',
+    admin_users: 'Users', audit_log: 'Audit Entries', db_size_mb: 'DB Size (MB)'
+  };
+  container.innerHTML = Object.entries(labels).map(([key, label]) => {
+    const val = key === 'db_size_mb' ? `${stats[key]}` : (stats[key] || 0).toLocaleString();
+    return `<div class="admin-stat"><div class="as-val">${val}</div><div class="as-label">${label}</div></div>`;
+  }).join('');
+}
+
+function downloadBackup() {
+  window.open('/api/admin/backup', '_blank');
+}
+
+init();
+</script>
+</body>
+</html>
