@@ -32,14 +32,124 @@ input, select { font-family: inherit; }
 .header .logo { display: flex; align-items: center; gap: 10px; }
 .header .logo img { height: 70px; filter: brightness(0) invert(1); margin-top: 20px; }
 .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.5px; }
-.header nav { display: flex; gap: 0; margin-left: 32px; height: 100%; flex: 1; }
+.header nav { display: flex; gap: 0; margin-left: 24px; height: 100%; flex: 1; }
 .header nav a {
-  display: flex; align-items: center; padding: 0 16px; color: rgba(255,255,255,.7);
-  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  display: flex; align-items: center; padding: 0 12px; color: rgba(255,255,255,.7);
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
   border-bottom: 2px solid transparent; transition: all .15s;
 }
 .header nav a:hover { color: #fff; text-decoration: none; }
 .header nav a.active { color: #fff; border-bottom-color: var(--green); }
+.nav-dropdown { position: relative; display: flex; align-items: center; height: 100%; }
+.nav-dropdown-btn {
+  display: flex; align-items: center; gap: 4px; padding: 0 12px; color: rgba(255,255,255,.7);
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+  border: none; background: none; cursor: pointer; height: 100%;
+  border-bottom: 2px solid transparent; transition: all .15s;
+}
+.nav-dropdown-btn:hover { color: #fff; }
+.nav-dropdown-btn.active { color: #fff; border-bottom-color: var(--green); }
+.nav-dropdown-menu {
+  display: none; position: absolute; top: 100%; left: 0; background: #fff;
+  border-radius: 0 0 8px 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 180px;
+  z-index: 200; overflow: hidden;
+}
+.nav-dropdown.open .nav-dropdown-menu { display: block; }
+.header nav .nav-dropdown-menu a {
+  display: block; padding: 10px 16px; color: var(--text); font-size: 13px;
+  text-decoration: none; transition: background .1s; font-weight: 500;
+  height: auto; border-bottom: none; text-transform: none; letter-spacing: normal;
+}
+.header nav .nav-dropdown-menu a:hover { background: var(--cream); color: var(--text); }
+.global-search { position: relative; margin-left: auto; margin-right: 8px; }
+.global-search input {
+  width: 220px; padding: 7px 12px 7px 32px; border: 1px solid rgba(255,255,255,.2);
+  border-radius: 6px; background: rgba(255,255,255,.1); color: #fff; font-size: 13px;
+  transition: all .2s;
+}
+.global-search input::placeholder { color: rgba(255,255,255,.5); }
+.global-search input:focus { outline: none; width: 320px; background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.4); }
+.global-search .search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.5);
+  font-size: 14px; pointer-events: none;
+}
+.search-results {
+  display: none; position: absolute; top: 100%; left: 0; right: 0; min-width: 400px;
+  background: #fff; border-radius: 0 0 8px 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  z-index: 300; max-height: 480px; overflow-y: auto; margin-top: 2px;
+}
+.search-results.open { display: block; }
+.search-results .sr-section { padding: 8px 12px 4px; font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+.search-results .sr-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; transition: background .1s;
+}
+.search-results .sr-item:hover { background: var(--cream); }
+.search-results .sr-item .sr-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.search-results .sr-item .sr-icon.contact { background: #dbeafe; color: #1d4ed8; }
+.search-results .sr-item .sr-icon.company { background: #dcfce7; color: #166534; }
+.search-results .sr-item .sr-icon.account { background: #fef3c7; color: #92400e; }
+.search-results .sr-item .sr-name { font-weight: 500; font-size: 13px; }
+.search-results .sr-item .sr-detail { font-size: 12px; color: var(--text2); }
+.search-results .sr-empty { padding: 16px; text-align: center; color: var(--text3); font-size: 13px; }
+/* Production / Materials */
+.prod-status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.prod-stat { background: #fff; border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); text-align: center; }
+.prod-stat .ps-val { font-size: 24px; font-weight: 700; }
+.prod-stat .ps-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; margin-top: 4px; }
+.prod-stat.received .ps-val { color: #166534; }
+.prod-stat.missing .ps-val { color: #dc2626; }
+.prod-stat.pending .ps-val { color: #92400e; }
+.badge-received { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+.badge-missing { display: inline-block; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+.badge-paid { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+.badge-unpaid { display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+.badge-unbilled { display: inline-block; background: #e5e7eb; color: #6b7280; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+/* Calendar */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cal-header { background: var(--teal); color: #fff; font-size: 11px; font-weight: 600; padding: 8px 4px; text-align: center; text-transform: uppercase; }
+.cal-day { background: #fff; min-height: 90px; padding: 4px 6px; font-size: 12px; position: relative; }
+.cal-day.empty { background: var(--cream); }
+.cal-day.today { box-shadow: inset 0 0 0 2px var(--green); }
+.cal-day .day-num { font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 2px; }
+.cal-day .cal-event { font-size: 10px; padding: 1px 4px; border-radius: 2px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.cal-day .cal-event.confirmed { background: #dcfce7; color: #166534; }
+.cal-day .cal-event.proposal { background: #fef3c7; color: #92400e; }
+.cal-day .cal-event.missing-mat { background: #fee2e2; color: #dc2626; }
+.cal-nav { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.cal-nav h3 { font-size: 18px; font-weight: 600; min-width: 180px; }
+/* Bulk actions */
+.bulk-bar { display: none; background: var(--teal); color: #fff; padding: 8px 16px; border-radius: var(--radius); margin-bottom: 12px; align-items: center; gap: 12px; font-size: 13px; }
+.bulk-bar.active { display: flex; }
+.bulk-bar button { background: #fff; color: var(--teal); border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.bulk-bar button:hover { background: var(--cream); }
+.bulk-bar button.danger { background: #fee2e2; color: #dc2626; }
+.bulk-cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--teal); }
+/* Notes */
+.notes-section { margin-top: 12px; }
+.note-card { background: var(--cream); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; position: relative; }
+.note-card .note-meta { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.note-card .note-text { font-size: 13px; white-space: pre-wrap; }
+.note-card .note-del { position: absolute; top: 8px; right: 8px; font-size: 11px; color: var(--text3); cursor: pointer; opacity: 0; transition: opacity .15s; }
+.note-card:hover .note-del { opacity: 1; }
+.note-input { display: flex; gap: 8px; margin-top: 8px; }
+.note-input textarea { flex: 1; min-height: 60px; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 13px; resize: vertical; font-family: inherit; }
+/* Audit */
+.audit-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.audit-action { font-weight: 600; text-transform: capitalize; }
+.audit-time { color: var(--text3); font-size: 12px; white-space: nowrap; }
+.pipeline-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.pipeline-stat { background: #fff; border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); }
+.pipeline-stat .ps-val { font-size: 28px; font-weight: 700; color: var(--teal); }
+.pipeline-stat .ps-label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; margin-top: 4px; }
+.pipeline-stat.proposal .ps-val { color: #92400e; }
+.pipeline-section { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px; }
+.pipeline-section-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.pipeline-section-header h3 { font-size: 15px; font-weight: 600; }
+.pipeline-section-body { padding: 0; }
+.pipeline-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 16px; }
+.pipeline-tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; }
+.pipeline-tab:hover { color: var(--text); }
+.pipeline-tab.active { color: var(--teal); border-bottom-color: var(--green); }
 .header-right { display: flex; align-items: center; height: 100%; gap: 0; margin-left: auto; }
 .header-right a {
   display: flex; align-items: center; padding: 0 16px; color: rgba(255,255,255,.7);
@@ -81,6 +191,71 @@ input, select { font-family: inherit; }
 .user-dropdown .dropdown-divider { border-top: 1px solid var(--border); margin: 4px 0; }
 .header-right .user-dropdown a.danger { color: #c0392b; }
 .header-right .user-dropdown a.danger:hover { color: #c0392b; }
+
+/* Dashboard */
+.dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.dash-header h2 { font-size: 22px; font-weight: 700; }
+.dash-stats { display: flex; gap: 24px; }
+.dash-stat { text-align: center; }
+.dash-stat .val { font-size: 24px; font-weight: 700; color: var(--teal); }
+.dash-stat .lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.dash-card {
+  background: var(--surface); border-radius: 10px; padding: 20px;
+  box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+}
+.dash-wide { grid-column: 1 / -1; }
+.dash-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.dash-card-header h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.dash-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.dash-item:last-child { border-bottom: none; }
+.dash-item[style*="cursor:pointer"]:hover, .dash-item[onclick]:hover { background: var(--cream); }
+.dash-item .dash-icon {
+  width: 28px; height: 28px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+}
+.dash-item .dash-detail { flex: 1; min-width: 0; }
+.dash-item .dash-detail .primary { font-weight: 500; }
+.dash-item .dash-detail .secondary { font-size: 11px; color: var(--text2); }
+.dash-item .dash-meta { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.dash-item .dash-amount { font-weight: 600; color: var(--teal); white-space: nowrap; }
+.priority-high { color: #c0392b; }
+.priority-normal { color: var(--text2); }
+.priority-low { color: var(--text3); }
+.overdue-count { font-size: 36px; font-weight: 700; color: #c0392b; text-align: center; padding: 20px 0; }
+.overdue-count.zero { color: var(--green); }
+.task-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.task-row:last-child { border-bottom: none; }
+.task-row .task-check { cursor: pointer; font-size: 16px; opacity: .4; }
+.task-row .task-check:hover { opacity: 1; }
+.task-row .task-info { flex: 1; min-width: 0; }
+.task-row .task-info .task-subject { font-weight: 500; }
+.task-row .task-info .task-sub { font-size: 11px; color: var(--text2); }
+.task-row .task-date { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.task-row .task-date.overdue { color: #c0392b; font-weight: 600; }
+.task-row .task-actions { display: flex; gap: 4px; }
+
+/* Reports */
+.report-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.report-output { background: var(--surface); border-radius: 10px; padding: 20px; border: 1px solid var(--border); }
+.report-output table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.report-output th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); font-size: 11px; text-transform: uppercase; color: var(--text2); letter-spacing: .5px; cursor: pointer; user-select: none; }
+.report-output th:hover { color: var(--teal); }
+.report-output td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.report-output tr:hover td { background: #faf8f5; }
+.report-total td { font-weight: 700; border-top: 2px solid var(--teal); }
+@media print { .header, .filter-bar, .report-controls button, .dash-card-header button { display: none !important; } .report-output { border: none; box-shadow: none; } }
+
+/* Form grid (modals) */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .3px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; background: var(--surface); color: var(--text); box-sizing: border-box;
+}
 
 /* Layout */
 .container { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
@@ -432,6 +607,8 @@ tbody tr.clickable { cursor: pointer; }
 .credit-hold-badge { display: inline-block; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
 .credit-ok-badge { display: inline-block; background: var(--green); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
 .hs-linked-badge { display: inline-block; background: #f77c2a; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 4px; }
+.badge-confirmed { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+.badge-proposal { display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
 
 /* Sales Detail */
 .sales-detail-header {
@@ -581,11 +758,33 @@ tbody tr.clickable { cursor: pointer; }
     <img src="/logo.png" alt="DevIQ">
   </div>
   <nav>
-    <a href="#" class="active" data-tab="contacts">Contacts</a>
-    <a href="#" data-tab="companies">Companies</a>
+    <a href="#" class="active" data-tab="dashboard">Dashboard</a>
+    <div class="nav-dropdown" id="customersDropdown">
+      <button class="nav-dropdown-btn" onclick="toggleCustomersMenu(event)">Customers <span style="font-size:9px;">&#9660;</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="#" data-tab="contacts" onclick="navFromDropdown('contacts',event)">Contacts</a>
+        <a href="#" data-tab="companies" onclick="navFromDropdown('companies',event)">Companies</a>
+      </div>
+    </div>
     <a href="#" data-tab="lists">Lists</a>
     <a href="#" data-tab="sales">Ad Sales</a>
+    <a href="#" data-tab="pipeline">Pipeline</a>
+    <div class="nav-dropdown" id="opsDropdown">
+      <button class="nav-dropdown-btn" onclick="toggleOpsMenu(event)">Operations <span style="font-size:9px;">&#9660;</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="#" data-tab="production" onclick="navFromDropdown('production',event)">Materials</a>
+        <a href="#" data-tab="billing" onclick="navFromDropdown('billing',event)">Billing</a>
+        <a href="#" data-tab="calendar" onclick="navFromDropdown('calendar',event)">Calendar</a>
+      </div>
+    </div>
+    <a href="#" data-tab="reports">Reports</a>
   </nav>
+  <div class="global-search">
+    <span class="search-icon">&#128269;</span>
+    <input type="text" id="globalSearchInput" placeholder="Search contacts, companies..." autocomplete="off"
+           oninput="debouncedGlobalSearch()" onfocus="if(this.value.length>=2)document.getElementById('globalSearchResults').classList.add('open')" />
+    <div class="search-results" id="globalSearchResults"></div>
+  </div>
   <div class="header-right">
     <div class="user-menu">
       <button class="user-menu-btn" onclick="toggleUserMenu(event)">
@@ -596,8 +795,8 @@ tbody tr.clickable { cursor: pointer; }
           <strong>Administrator</strong>
           admin
         </div>
-        <a href="#" onclick="switchAdminPanel('adminSettings');showTab('admin');toggleUserMenu(event);return false;">&#9881; Settings</a>
-        <a href="#" onclick="switchAdminPanel('adminUsers');showTab('admin');toggleUserMenu(event);return false;">&#128101; Manage Users</a>
+        <a href="#" onclick="showTab('admin');navToAdminPanel('adminSettings');document.getElementById('userDropdown').classList.remove('open');return false;">&#9881; Settings</a>
+        <a href="#" onclick="showTab('admin');navToAdminPanel('adminUsers');document.getElementById('userDropdown').classList.remove('open');return false;">&#128101; Manage Users</a>
         <div class="dropdown-divider"></div>
         <a href="#" class="danger" onclick="return false;">&#9193; Log Out</a>
       </div>
@@ -606,10 +805,141 @@ tbody tr.clickable { cursor: pointer; }
 </div>
 
 <div class="container">
+  <!-- DASHBOARD -->
+  <div id="dashboardView">
+    <div class="dash-header">
+      <h2>Dashboard</h2>
+      <div class="dash-stats" id="dashStats"></div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card dash-wide">
+        <div class="dash-card-header">
+          <h3>Upcoming Tasks</h3>
+          <button class="btn btn-green btn-sm" onclick="openScheduleModal()">+ Schedule</button>
+        </div>
+        <div id="dashTasks"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-header"><h3>Recent Sales</h3></div>
+        <div id="dashSales"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-header"><h3>Recent Activity</h3></div>
+        <div id="dashActivity"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-header"><h3>Marketing Lists</h3></div>
+        <div id="dashLists"></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-header"><h3>Overdue</h3></div>
+        <div id="dashOverdue"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div id="pipelineView" style="display:none;">
+    <h2 style="margin-bottom:16px;">Pipeline</h2>
+    <div class="pipeline-stats" id="pipelineStats"></div>
+    <div class="pipeline-tabs" id="pipelineTabs">
+      <div class="pipeline-tab active" onclick="switchPipelineTab('proposals',this)">Open Proposals</div>
+      <div class="pipeline-tab" onclick="switchPipelineTab('byIssue',this)">By Issue</div>
+      <div class="pipeline-tab" onclick="switchPipelineTab('byRep',this)">By Rep</div>
+      <div class="pipeline-tab" onclick="switchPipelineTab('lapsed',this)">Lapsed Accounts</div>
+    </div>
+    <div id="pipelineContent" style="margin-top:16px;"></div>
+  </div>
+
+  <!-- PRODUCTION / MATERIALS -->
+  <div id="productionView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Material Tracking</h2>
+      <select id="prodPubFilter" class="btn" style="min-width:180px;" onchange="loadProduction()">
+        <option value="">All Publications</option>
+      </select>
+    </div>
+    <div class="prod-status-grid" id="prodStats"></div>
+    <div class="pipeline-tabs" id="prodTabs">
+      <div class="pipeline-tab active" onclick="switchProdTab('missing',this)">Missing Materials</div>
+      <div class="pipeline-tab" onclick="switchProdTab('byIssue',this)">By Issue</div>
+    </div>
+    <div id="prodContent" style="margin-top:16px;"></div>
+  </div>
+
+  <!-- BILLING -->
+  <div id="billingView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Billing &amp; Invoicing</h2>
+      <select id="billingPubFilter" class="btn" style="min-width:180px;" onchange="loadBilling()">
+        <option value="">All Publications</option>
+      </select>
+    </div>
+    <div class="prod-status-grid" id="billingStats"></div>
+    <div class="pipeline-tabs" id="billingTabs">
+      <div class="pipeline-tab active" onclick="switchBillingTab('unbilled',this)">Unbilled</div>
+      <div class="pipeline-tab" onclick="switchBillingTab('unpaid',this)">Unpaid Invoices</div>
+    </div>
+    <div id="billingContent" style="margin-top:16px;"></div>
+  </div>
+
+  <!-- PRODUCTION CALENDAR -->
+  <div id="calendarView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Production Calendar</h2>
+      <select id="calPubFilter" class="btn" style="min-width:180px;" onchange="loadCalendar()">
+        <option value="">All Publications</option>
+      </select>
+    </div>
+    <div class="cal-nav">
+      <button class="btn btn-sm" onclick="calMonth(-1)">&larr;</button>
+      <h3 id="calTitle"></h3>
+      <button class="btn btn-sm" onclick="calMonth(1)">&rarr;</button>
+      <button class="btn btn-sm" onclick="calToday()">Today</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div id="calLegend" style="margin-top:12px;display:flex;gap:16px;font-size:12px;">
+      <span><span class="cal-event confirmed" style="display:inline-block;">&nbsp;&nbsp;&nbsp;</span> Confirmed</span>
+      <span><span class="cal-event proposal" style="display:inline-block;">&nbsp;&nbsp;&nbsp;</span> Proposal</span>
+      <span><span class="cal-event missing-mat" style="display:inline-block;">&nbsp;&nbsp;&nbsp;</span> Missing Materials</span>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div id="reportsView" style="display:none;">
+    <h2 style="margin-bottom:16px;">Reports</h2>
+    <div class="report-controls">
+      <select id="reportType" class="btn" style="min-width:200px;" onchange="switchReport()">
+        <option value="sales-by-issue">Sales by Issue</option>
+        <option value="revenue-summary">Revenue Summary</option>
+        <option value="rep-performance">Rep Performance</option>
+      </select>
+      <select id="reportPub" class="btn" style="min-width:180px;" onchange="loadIssueDates()">
+        <option value="">All Publications</option>
+      </select>
+      <select id="reportYear" class="btn" style="min-width:120px;" onchange="loadIssueDates()"></select>
+      <select id="reportIssue" class="btn" style="min-width:160px;">
+        <option value="">All Issues</option>
+      </select>
+      <select id="reportRep" class="btn" style="min-width:120px;">
+        <option value="">All Reps</option>
+      </select>
+      <select id="reportLikelihood" class="btn" style="min-width:140px;">
+        <option value="">All Bookings</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="proposal">Proposals</option>
+      </select>
+      <button class="btn btn-green" onclick="runReport()">Run Report</button>
+      <button class="btn" onclick="printReport()">&#128424; Print</button>
+    </div>
+    <div class="result-count" id="reportResultCount"></div>
+    <div id="reportOutput" class="report-output"></div>
+  </div>
+
   <!-- LIST VIEWS -->
-  <div id="listView">
+  <div id="listView" style="display:none;">
     <!-- Contacts -->
-    <div id="contactsView">
+    <div id="contactsView" style="display:none;">
       <div class="filter-bar">
         <div class="filter-bar-top">
           <div class="search-wrap">
@@ -629,7 +959,9 @@ tbody tr.clickable { cursor: pointer; }
             <option value="100">100 rows</option>
             <option value="200">200 rows</option>
           </select>
+          <button class="btn" onclick="toggleBulkMode()">&#9745; Bulk</button>
           <button class="btn btn-green" onclick="exportCSV('contacts')">&#8615; Export CSV</button>
+          <button class="btn btn-green" onclick="document.getElementById('createContactModal').classList.add('open')">+ New Contact</button>
         </div>
         <div class="advanced-filters" id="advancedFilters" style="display:none;">
           <div id="filterRows"></div>
@@ -641,6 +973,13 @@ tbody tr.clickable { cursor: pointer; }
           </div>
           <div class="saved-filters-bar" id="savedFiltersBar"></div>
         </div>
+      </div>
+      <div class="bulk-bar" id="bulkBar">
+        <span id="bulkCount">0 selected</span>
+        <button onclick="bulkExport()">Export Selected</button>
+        <button onclick="bulkAddToList()">Add to List</button>
+        <button class="danger" onclick="bulkDelete()">Delete</button>
+        <span style="margin-left:auto;cursor:pointer;" onclick="toggleBulkMode()">&times; Close</span>
       </div>
       <div class="result-count" id="contactsResultCount"></div>
       <div class="table-wrap">
@@ -670,6 +1009,7 @@ tbody tr.clickable { cursor: pointer; }
             </div>
           </div>
           <button class="btn btn-green" onclick="exportCSV('companies')">&#8615; Export CSV</button>
+          <button class="btn btn-green" onclick="document.getElementById('createCompanyModal').classList.add('open')">+ New Company</button>
         </div>
       </div>
       <div class="result-count" id="companiesResultCount"></div>
@@ -690,6 +1030,32 @@ tbody tr.clickable { cursor: pointer; }
         <h2>Marketing Lists</h2>
         <button class="btn btn-green" onclick="openListBuilder()">+ New List</button>
       </div>
+      <div class="filter-bar" style="margin-bottom:16px;">
+        <div class="filter-bar-top">
+          <div class="search-wrap">
+            <input class="search-input" id="listSearch" placeholder="Search lists by name or description..." />
+            <button class="search-clear" onclick="document.getElementById('listSearch').value='';document.getElementById('listSearch').dispatchEvent(new Event('input'));">&times;</button>
+          </div>
+          <select id="listCreatorFilter" class="btn" style="min-width:140px;">
+            <option value="">All Creators</option>
+          </select>
+          <select id="listDateFilter" class="btn" style="min-width:140px;">
+            <option value="">Any Date</option>
+            <option value="7">Last 7 Days</option>
+            <option value="30">Last 30 Days</option>
+            <option value="90">Last 90 Days</option>
+            <option value="365">Last Year</option>
+          </select>
+          <select id="listSortSelect" class="btn" style="min-width:140px;">
+            <option value="name">Sort: Name</option>
+            <option value="created_desc">Sort: Newest</option>
+            <option value="created_asc">Sort: Oldest</option>
+            <option value="count_desc">Sort: Most Contacts</option>
+            <option value="count_asc">Sort: Fewest Contacts</option>
+          </select>
+        </div>
+      </div>
+      <div class="result-count" id="listResultCount"></div>
       <div id="listsContainer"></div>
     </div>
 
@@ -1239,6 +1605,107 @@ tbody tr.clickable { cursor: pointer; }
   </div>
 </div>
 
+<!-- Schedule Activity Modal -->
+<div class="modal-overlay" id="scheduleModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:500px;">
+    <h3 id="scheduleModalTitle">Schedule Activity</h3>
+    <input type="hidden" id="schedEditId" value="">
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Subject *</label>
+        <input type="text" id="schedSubject" placeholder="Call, follow up, send proposal...">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="schedType">
+          <option value="task">Task</option>
+          <option value="call">Call</option>
+          <option value="meeting">Meeting</option>
+          <option value="email">Email</option>
+          <option value="follow_up">Follow Up</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="schedPriority">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Due Date *</label>
+        <input type="date" id="schedDueDate">
+      </div>
+      <div class="form-group">
+        <label>Due Time</label>
+        <input type="time" id="schedDueTime">
+      </div>
+      <div class="form-group">
+        <label>Assigned To</label>
+        <input type="text" id="schedAssignee" value="admin">
+      </div>
+      <div class="form-group">
+        <label>Contact ID</label>
+        <input type="text" id="schedContactId" placeholder="Optional">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Description</label>
+        <textarea id="schedDesc" rows="3" placeholder="Additional details..."></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('scheduleModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="saveScheduledActivity()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Contact Modal -->
+<div class="modal-overlay" id="createContactModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:560px;">
+    <h3>New Contact</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>First Name *</label><input type="text" id="ccFirstname"></div>
+      <div class="form-group"><label>Last Name *</label><input type="text" id="ccLastname"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="ccEmail"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="ccPhone"></div>
+      <div class="form-group"><label>Company</label><input type="text" id="ccCompany"></div>
+      <div class="form-group"><label>Job Title</label><input type="text" id="ccJobtitle"></div>
+      <div class="form-group"><label>City</label><input type="text" id="ccCity"></div>
+      <div class="form-group"><label>State</label><input type="text" id="ccState"></div>
+      <div class="form-group"><label>Owner</label><input type="text" id="ccOwner"></div>
+      <div class="form-group"><label>Lifecycle Stage</label>
+        <select id="ccLifecycle"><option value="">--</option><option value="subscriber">Subscriber</option><option value="lead">Lead</option><option value="marketingqualifiedlead">MQL</option><option value="salesqualifiedlead">SQL</option><option value="opportunity">Opportunity</option><option value="customer">Customer</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('createContactModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="saveNewContact()">Create Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Company Modal -->
+<div class="modal-overlay" id="createCompanyModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:500px;">
+    <h3>New Company</h3>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1;"><label>Company Name *</label><input type="text" id="coName"></div>
+      <div class="form-group"><label>Domain</label><input type="text" id="coDomain" placeholder="example.com"></div>
+      <div class="form-group"><label>Industry</label><input type="text" id="coIndustry"></div>
+      <div class="form-group"><label>City</label><input type="text" id="coCity"></div>
+      <div class="form-group"><label>State</label><input type="text" id="coState"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="coPhone"></div>
+      <div class="form-group"><label>Owner</label><input type="text" id="coOwner"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('createCompanyModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="saveNewCompany()">Create Company</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // STATE
 let state = {
@@ -1287,31 +1754,60 @@ function setCompanyCols(cols) {
 // INIT
 async function init() {
   loadStats();
+  loadDashboard();
   await Promise.all([loadContactFields(), loadCompanyFields()]);
-  loadContacts();
   loadSavedFilters();
 }
 
 // TABS
-document.querySelectorAll('.header nav a, .header-right a[data-tab]').forEach(a => {
+document.querySelectorAll('.header nav > a[data-tab], .header-right a[data-tab]').forEach(a => {
   a.addEventListener('click', e => {
     e.preventDefault();
-    document.querySelectorAll('.header nav a, .header-right a[data-tab]').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.header nav > a[data-tab], .header-right a[data-tab], .nav-dropdown-btn').forEach(t => t.classList.remove('active'));
     a.classList.add('active');
     state.activeTab = a.dataset.tab;
     showTab(a.dataset.tab);
   });
 });
 
+function toggleCustomersMenu(e) {
+  e.stopPropagation();
+  document.getElementById('opsDropdown').classList.remove('open');
+  document.getElementById('customersDropdown').classList.toggle('open');
+}
+function toggleOpsMenu(e) {
+  e.stopPropagation();
+  document.getElementById('customersDropdown').classList.remove('open');
+  document.getElementById('opsDropdown').classList.toggle('open');
+}
+function navFromDropdown(tab, e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('customersDropdown').classList.remove('open');
+  document.getElementById('opsDropdown').classList.remove('open');
+  document.querySelectorAll('.header nav a, .header-right a[data-tab], .nav-dropdown-btn').forEach(t => t.classList.remove('active'));
+  const parent = e.target && e.target.closest ? e.target.closest('.nav-dropdown') : null;
+  if (parent) parent.querySelector('.nav-dropdown-btn').classList.add('active');
+  state.activeTab = tab;
+  showTab(tab);
+}
 function toggleUserMenu(e) {
   e.stopPropagation();
   document.getElementById('userDropdown').classList.toggle('open');
 }
 document.addEventListener('click', () => {
   document.getElementById('userDropdown').classList.remove('open');
+  document.getElementById('customersDropdown').classList.remove('open');
+  document.getElementById('opsDropdown').classList.remove('open');
 });
 
 function showTab(tab) {
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('reportsView').style.display = 'none';
+  document.getElementById('pipelineView').style.display = 'none';
+  document.getElementById('productionView').style.display = 'none';
+  document.getElementById('billingView').style.display = 'none';
+  document.getElementById('calendarView').style.display = 'none';
   document.getElementById('contactsView').style.display = 'none';
   document.getElementById('companiesView').style.display = 'none';
   document.getElementById('listsView').style.display = 'none';
@@ -1319,16 +1815,47 @@ function showTab(tab) {
   document.getElementById('salesView').style.display = 'none';
   document.getElementById('salesDetailView').style.display = 'none';
   document.getElementById('adminView').style.display = 'none';
+  document.getElementById('listView').style.display = 'none';
   document.getElementById('detailPage').classList.remove('active');
   if (tab === 'admin') {
-    document.getElementById('listView').style.display = 'none';
     document.getElementById('adminView').style.display = '';
     initAdmin();
+    return;
+  }
+  if (tab === 'dashboard') {
+    document.getElementById('dashboardView').style.display = '';
+    loadDashboard();
+    return;
+  }
+  if (tab === 'reports') {
+    document.getElementById('reportsView').style.display = '';
+    initReports();
+    return;
+  }
+  if (tab === 'pipeline') {
+    document.getElementById('pipelineView').style.display = '';
+    loadPipeline();
+    return;
+  }
+  if (tab === 'production') {
+    document.getElementById('productionView').style.display = '';
+    loadProduction();
+    return;
+  }
+  if (tab === 'billing') {
+    document.getElementById('billingView').style.display = '';
+    loadBilling();
+    return;
+  }
+  if (tab === 'calendar') {
+    document.getElementById('calendarView').style.display = '';
+    loadCalendar();
     return;
   }
   document.getElementById('listView').style.display = '';
   if (tab === 'contacts') {
     document.getElementById('contactsView').style.display = '';
+    loadContacts();
   } else if (tab === 'companies') {
     document.getElementById('companiesView').style.display = '';
     loadCompanies();
@@ -1788,7 +2315,9 @@ function renderContactsHeader() {
   const labels = CONTACT_COL_LABELS;
   const sortableCols = new Set(['firstname','lastname','email','company','owner_name','city','state','createdate','lastmodifieddate']);
   const tr = document.querySelector('#contactsHead tr');
-  tr.innerHTML = cols.map(col => {
+  const bulkActive = document.getElementById('bulkBar').classList.contains('active');
+  const bulkTh = bulkActive ? `<th style="width:36px;"><input type="checkbox" class="bulk-cb" id="bulkSelectAll" onchange="toggleBulkAll(this)"></th>` : '';
+  tr.innerHTML = bulkTh + cols.map(col => {
     const label = labels[col] || formatLabel(col);
     if (sortableCols.has(col)) {
       const isSorted = state.contacts.sort === col;
@@ -1815,8 +2344,10 @@ function renderContacts(data) {
   if (!data.contacts.length) {
     tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:40px;color:var(--text2);">No contacts match your filters</td></tr>`;
   } else {
+    const bulkOn = document.getElementById('bulkBar').classList.contains('active');
     tbody.innerHTML = data.contacts.map(c => {
-      return `<tr class="clickable" onclick="openContact('${c.id}')">` +
+      const cbTd = bulkOn ? `<td onclick="event.stopPropagation()"><input type="checkbox" class="bulk-cb" data-id="${c.id}" ${bulkSelected.has(String(c.id))?'checked':''} onchange="toggleBulkItem('${c.id}',this,event)"></td>` : '';
+      return `<tr class="clickable" onclick="openContact('${c.id}')">${cbTd}` +
         cols.map(col => {
           if (col === 'lastname') {
             const name = [c.firstname, c.lastname].filter(Boolean).join(' ') || '—';
@@ -1918,22 +2449,63 @@ document.getElementById('companySearch').addEventListener('input', e => {
 // MARKETING LISTS
 // ══════════════════════════════════════
 async function loadLists() {
-  const lists = await (await fetch('/api/lists')).json();
+  state.allLists = await (await fetch('/api/lists')).json();
+  const creatorSel = document.getElementById('listCreatorFilter');
+  const creators = [...new Set(state.allLists.map(l => l.created_by || 'admin'))].sort();
+  const curCreator = creatorSel.value;
+  creatorSel.innerHTML = '<option value="">All Creators</option>' +
+    creators.map(c => `<option value="${esc(c)}"${c === curCreator ? ' selected' : ''}>${esc(c)}</option>`).join('');
+  renderLists();
+}
+
+function renderLists() {
+  const search = (document.getElementById('listSearch').value || '').toLowerCase();
+  const creator = document.getElementById('listCreatorFilter').value;
+  const days = document.getElementById('listDateFilter').value;
+  const sort = document.getElementById('listSortSelect').value;
   const container = document.getElementById('listsContainer');
-  if (!lists.length) {
+  const countEl = document.getElementById('listResultCount');
+
+  let filtered = (state.allLists || []).filter(l => {
+    if (search && !l.name.toLowerCase().includes(search) &&
+        !(l.description || '').toLowerCase().includes(search)) return false;
+    if (creator && (l.created_by || 'admin') !== creator) return false;
+    if (days) {
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(days));
+      if (new Date(l.created_at) < cutoff) return false;
+    }
+    return true;
+  });
+
+  if (sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sort === 'created_desc') filtered.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  else if (sort === 'created_asc') filtered.sort((a, b) => a.created_at.localeCompare(b.created_at));
+  else if (sort === 'count_desc') filtered.sort((a, b) => b.count - a.count);
+  else if (sort === 'count_asc') filtered.sort((a, b) => a.count - b.count);
+
+  countEl.textContent = `${filtered.length} list${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!state.allLists || !state.allLists.length) {
     container.innerHTML = `
       <div style="text-align:center;padding:60px 20px;color:var(--text2);">
         <div style="font-size:48px;margin-bottom:12px;opacity:.3;">&#9776;</div>
         <p style="font-size:16px;margin-bottom:8px;">No marketing lists yet</p>
         <p style="font-size:13px;">Create a list from your contact filters to build dynamic audiences that auto-update.</p>
       </div>`;
+    countEl.textContent = '';
     return;
   }
-  container.innerHTML = lists.map(l => {
+  if (!filtered.length) {
+    container.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text2);">No lists match your search.</div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(l => {
     const filterSummary = l.filters.map(f => {
       const val = Array.isArray(f.value) ? f.value.join(', ') : (f.value || '');
       return `<span class="filter-pill">${formatLabel(f.field)} ${f.op.replace(/_/g,' ')} ${val}</span>`;
     }).join(' ');
+    const created = l.created_at ? new Date(l.created_at).toLocaleDateString() : '';
+    const by = l.created_by || 'admin';
     return `
     <div class="list-card" onclick="openListDetail(${l.id})">
       <div class="list-icon">&#9776;</div>
@@ -1941,6 +2513,7 @@ async function loadLists() {
         <h3>${esc(l.name)}</h3>
         <p>${esc(l.description || '')}</p>
         <div style="margin-top:6px;">${filterSummary || '<span style="font-size:12px;color:var(--text3);">No criteria (all contacts)</span>'}</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--text3);">Created ${created} by ${esc(by)}</div>
       </div>
       <div style="text-align:center;margin-right:12px;">
         <div class="list-count">${l.count.toLocaleString()}</div>
@@ -1953,6 +2526,11 @@ async function loadLists() {
     </div>`;
   }).join('');
 }
+
+document.getElementById('listSearch').addEventListener('input', renderLists);
+document.getElementById('listCreatorFilter').addEventListener('change', renderLists);
+document.getElementById('listDateFilter').addEventListener('change', renderLists);
+document.getElementById('listSortSelect').addEventListener('change', renderLists);
 
 async function openListDetail(id) {
   state.listDetailId = id;
@@ -2094,6 +2672,18 @@ async function openContact(id) {
         </div>
         <div class="accordion-body open">${companiesHtml}</div>
       </div>
+      <div class="accordion">
+        <div class="accordion-header open" onclick="toggleAcc(this)">
+          Notes <span class="acc-icon">&#9660;</span>
+        </div>
+        <div class="accordion-body open">
+          <div id="contactNotes_${id}"></div>
+          <div class="note-input">
+            <textarea id="contactNotes_${id}_input" placeholder="Add a note..."></textarea>
+            <button class="btn btn-green btn-sm" onclick="addNote('contact','${id}','contactNotes_${id}')" style="align-self:flex-end;">Save</button>
+          </div>
+        </div>
+      </div>
       ${customKeys.length ? `
       <div class="accordion">
         <div class="accordion-header" onclick="toggleAcc(this)">
@@ -2121,6 +2711,7 @@ async function openContact(id) {
     </div>`;
 
   window.scrollTo(0, 0);
+  loadNotes('contact', id, 'contactNotes_' + id);
 }
 
 function buildPropsHtml(obj, fields) {
@@ -2332,9 +2923,10 @@ let salesPage = 1;
 async function initSales() {
   if (!salesInited) {
     salesInited = true;
-    const [pubs, reps] = await Promise.all([
+    const [pubs, reps, summary] = await Promise.all([
       fetch('/api/sales/publications').then(r => r.json()),
       fetch('/api/sales/stats').then(r => r.json()),
+      fetch('/api/sales/summary').then(r => r.json()),
     ]);
     const repSel = document.getElementById('salesRepFilter');
     reps.reps.forEach(r => {
@@ -2352,19 +2944,24 @@ async function initSales() {
     document.getElementById('salesRepFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
     document.getElementById('salesPubFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
     document.getElementById('salesSort').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
-    renderSalesDashboard(reps);
+    renderSalesDashboard(summary);
   }
   loadSalesAccounts();
 }
 
-function renderSalesDashboard(stats) {
+function renderSalesDashboard(summary) {
+  const yr = summary.current_year;
+  const repHtml = (summary.rep_totals || []).slice(0, 5).map(r =>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;">
+       <span>${esc(r.rep)}</span><span style="font-weight:600;">${fmtMoney(r.revenue)} (${r.insertions})</span>
+     </div>`
+  ).join('') || '<span style="font-size:12px;color:var(--text3);">No data</span>';
+
   document.getElementById('salesDashboard').innerHTML = `
-    <div class="stat-card"><div class="stat-value">${stats.total_accounts.toLocaleString()}</div><div class="stat-label">Accounts</div></div>
-    <div class="stat-card"><div class="stat-value">${stats.total_contacts.toLocaleString()}</div><div class="stat-label">Contacts</div></div>
-    <div class="stat-card"><div class="stat-value">${stats.total_contracts.toLocaleString()}</div><div class="stat-label">Contracts</div></div>
-    <div class="stat-card"><div class="stat-value">${stats.total_insertions.toLocaleString()}</div><div class="stat-label">Insertions</div></div>
-    <div class="stat-card"><div class="stat-value">$${(stats.total_revenue/1000000).toFixed(1)}M</div><div class="stat-label">Total Revenue</div></div>
-    <div class="stat-card"><div class="stat-value">${stats.publications}</div><div class="stat-label">Publications</div></div>
+    <div class="stat-card"><div class="stat-value">${fmtMoney(summary.ytd_revenue)}</div><div class="stat-label">${yr} YTD Revenue</div></div>
+    <div class="stat-card"><div class="stat-value">${fmtMoney(summary.prev_year_revenue)}</div><div class="stat-label">${yr - 1} Total</div></div>
+    <div class="stat-card"><div class="stat-value">${(summary.issues_this_year || []).length}</div><div class="stat-label">${yr} Issue/Pub Combos</div></div>
+    <div class="stat-card" style="min-width:220px;"><div class="stat-label" style="margin-bottom:6px;">${yr} by Rep</div>${repHtml}</div>
   `;
 }
 
@@ -2510,6 +3107,14 @@ async function openSalesDetail(id) {
           </tbody>
         </table>
       </div>
+      <div class="sales-panel" style="margin-top:16px;">
+        <h3 style="margin-bottom:8px;">Notes</h3>
+        <div id="accountNotes_${id}"></div>
+        <div class="note-input">
+          <textarea id="accountNotes_${id}_input" placeholder="Add a note about this account..."></textarea>
+          <button class="btn btn-green btn-sm" onclick="addNote('account','${id}','accountNotes_${id}')" style="align-self:flex-end;">Save</button>
+        </div>
+      </div>
     </div>
 
     <!-- Contracts Tab -->
@@ -2546,6 +3151,11 @@ async function openSalesDetail(id) {
           <select id="insFilterStatus" onchange="loadSalesInsertions(currentSalesAccountId,1)">
             <option value="">Active (non-canceled)</option><option value="open">Open</option>
             <option value="closed">Closed</option><option value="canceled">Canceled</option>
+          </select>
+          <select id="insFilterLikelihood" onchange="loadSalesInsertions(currentSalesAccountId,1)">
+            <option value="">All Bookings</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="proposal">Proposals</option>
           </select>
         </div>
         <div id="salesInsertions"></div>
@@ -2589,6 +3199,7 @@ async function openSalesDetail(id) {
   ctSort = {col: 'contract_start', dir: 'desc'};
   insSort = {col: 'issue_date', dir: 'desc'};
   initSdFilters();
+  loadNotes('account', id, 'accountNotes_' + id);
 }
 
 function switchSdTab(tabEl, contentId) {
@@ -2692,11 +3303,13 @@ async function loadSalesInsertions(id, page) {
   const type = document.getElementById('insFilterType')?.value || '';
   const rep = document.getElementById('insFilterRep')?.value || '';
   const status = document.getElementById('insFilterStatus')?.value || '';
+  const likelihood = document.getElementById('insFilterLikelihood')?.value || '';
   const params = new URLSearchParams({page, per_page: 25, sort: insSort.col, order: insSort.dir});
   if (pub) params.set('pub', pub);
   if (type) params.set('type', type);
   if (rep) params.set('rep', rep);
   if (status) params.set('status', status);
+  if (likelihood) params.set('likelihood', likelihood);
   const d = await (await fetch(`/api/sales/accounts/${id}/insertions?${params}`)).json();
   document.getElementById('salesInsertions').innerHTML = `
     <table>
@@ -2707,7 +3320,7 @@ async function loadSalesInsertions(id, page) {
         <th class="${insSort.col==='ad_size'?'sortable sorted':'sortable'}" onclick="sortInsCol('ad_size')">Size<span class="sort-arrow">${insSort.col==='ad_size'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
         <th>Color</th>
         <th class="${insSort.col==='category'?'sortable sorted':'sortable'}" onclick="sortInsCol('category')">Category<span class="sort-arrow">${insSort.col==='category'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
-        <th class="${insSort.col==='ad_cost'?'sortable sorted':'sortable'}" onclick="sortInsCol('ad_cost')" style="text-align:right;">Cost<span class="sort-arrow">${insSort.col==='ad_cost'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th class="${insSort.col==='bill_cost'?'sortable sorted':'sortable'}" onclick="sortInsCol('bill_cost')" style="text-align:right;">Bill Amount<span class="sort-arrow">${insSort.col==='bill_cost'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
         <th class="${insSort.col==='rep1'?'sortable sorted':'sortable'}" onclick="sortInsCol('rep1')">Rep<span class="sort-arrow">${insSort.col==='rep1'?(insSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
         <th>Status</th>
       </tr></thead>
@@ -2720,9 +3333,10 @@ async function loadSalesInsertions(id, page) {
           <td>${esc(i.ad_size || '')}</td>
           <td>${esc(i.color || '')}</td>
           <td>${esc(i.category || '')}</td>
-          <td style="text-align:right;font-weight:600;">${fmtMoney(i.ad_cost)}</td>
+          <td style="text-align:right;font-weight:600;">${fmtMoney(i.bill_cost || i.ad_cost)}</td>
           <td>${esc(i.rep1 || '')}</td>
-          <td>${i.canceled ? 'Canceled' : i.is_open ? '&#9679; Open' : 'Closed'}</td>
+          <td>${i.canceled ? 'Canceled' : i.is_open ? '&#9679; Open' : 'Closed'}
+            <span class="${i.likelihood===1?'badge-confirmed':'badge-proposal'}" style="margin-left:4px;">${i.likelihood===1?'Confirmed':'Proposal'}</span></td>
         </tr>
       `).join('')}
       </tbody>
@@ -3083,6 +3697,769 @@ async function submitActivity() {
 }
 
 // ══════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════
+async function loadDashboard() {
+  const d = await (await fetch('/api/dashboard')).json();
+  document.getElementById('dashStats').innerHTML = `
+    <div class="dash-stat"><div class="val">${(d.total_contacts||0).toLocaleString()}</div><div class="lbl">Contacts</div></div>
+    <div class="dash-stat"><div class="val">${(d.total_companies||0).toLocaleString()}</div><div class="lbl">Companies</div></div>
+    <div class="dash-stat"><div class="val">${(d.total_contracts||0).toLocaleString()}</div><div class="lbl">Contracts</div></div>
+  `;
+
+  const tasks = d.upcoming_tasks || [];
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('dashTasks').innerHTML = tasks.length ? tasks.map(t => {
+    const isOverdue = t.due_date < today;
+    return `<div class="task-row">
+      <span class="task-check" onclick="completeTask(${t.id})" title="Mark complete">&#9633;</span>
+      <div class="task-info">
+        <div class="task-subject">${esc(t.subject)}</div>
+        <div class="task-sub">${esc(t.type)} &middot; ${esc(t.assigned_to)}${t.contact_id ? ' &middot; Contact #' + t.contact_id : ''}</div>
+      </div>
+      <span class="task-date${isOverdue ? ' overdue' : ''}">${t.due_date}${t.due_time ? ' ' + t.due_time : ''}</span>
+      <div class="task-actions">
+        <button class="btn btn-sm" onclick="editScheduled(${t.id})">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteScheduled(${t.id})">Del</button>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:var(--text3);font-size:13px;padding:12px 0;">No upcoming tasks. Click + Schedule to create one.</div>';
+
+  document.getElementById('dashSales').innerHTML = (d.recent_sales || []).length ?
+    d.recent_sales.map(s => `<div class="dash-item" style="cursor:pointer;" onclick="${s.account_id ? `showTab('sales');setTimeout(()=>openSalesDetail(${s.account_id}),100)` : ''}">
+      <div class="dash-detail">
+        <div class="primary">${esc(s.account_name || '—')}</div>
+        <div class="secondary">${esc(s.publication || '')} &middot; ${esc(s.type_ad || '')} &middot; ${esc(s.ad_size || '')}</div>
+      </div>
+      <div class="dash-amount">${fmtMoney(s.ad_cost)}</div>
+    </div>`).join('') : '<div style="color:var(--text3);font-size:13px;">No recent sales.</div>';
+
+  const typeIcons = {tasks:'&#128203;',emails:'&#9993;',notes:'&#128221;',meetings:'&#128197;',calls:'&#128222;'};
+  document.getElementById('dashActivity').innerHTML = (d.recent_activities || []).slice(0, 8).map(a => {
+    const name = [a.firstname, a.lastname].filter(Boolean).join(' ') || '—';
+    const ts = a.timestamp ? new Date(a.timestamp).toLocaleDateString() : '';
+    const click = a.contact_id ? `style="cursor:pointer;" onclick="showTab('contacts');setTimeout(()=>openContact('${a.contact_id}'),100)"` : '';
+    return `<div class="dash-item" ${click}>
+      <div class="dash-icon" style="background:var(--cream);color:var(--teal);">${typeIcons[a.type] || '&#128172;'}</div>
+      <div class="dash-detail">
+        <div class="primary">${esc(a.subject || a.type)}</div>
+        <div class="secondary">${esc(name)}${a.company ? ' at ' + esc(a.company) : ''}</div>
+      </div>
+      <div class="dash-meta">${ts}</div>
+    </div>`;
+  }).join('') || '<div style="color:var(--text3);font-size:13px;">No recent activity.</div>';
+
+  document.getElementById('dashLists').innerHTML = (d.recent_lists || []).map(l =>
+    `<div class="dash-item" style="cursor:pointer;" onclick="showTab('lists');setTimeout(()=>openListDetail(${l.id}),100)">
+      <div class="dash-detail">
+        <div class="primary">${esc(l.name)}</div>
+        <div class="secondary">${esc(l.description || '')}</div>
+      </div>
+      <div class="dash-meta">${new Date(l.created_at).toLocaleDateString()}</div>
+    </div>`
+  ).join('') || '<div style="color:var(--text3);font-size:13px;">No lists created yet.</div>';
+
+  const ov = d.overdue_tasks || 0;
+  document.getElementById('dashOverdue').innerHTML = `
+    <div class="overdue-count ${ov === 0 ? 'zero' : ''}">${ov}</div>
+    <div style="text-align:center;font-size:12px;color:var(--text2);">${ov === 0 ? 'All caught up!' : 'overdue task' + (ov !== 1 ? 's' : '')}</div>
+  `;
+}
+
+// ── Scheduled Activities ──
+function openScheduleModal(data) {
+  const m = document.getElementById('scheduleModal');
+  document.getElementById('schedEditId').value = data?.id || '';
+  document.getElementById('schedSubject').value = data?.subject || '';
+  document.getElementById('schedType').value = data?.type || 'task';
+  document.getElementById('schedPriority').value = data?.priority || 'normal';
+  document.getElementById('schedDueDate').value = data?.due_date || new Date().toISOString().slice(0, 10);
+  document.getElementById('schedDueTime').value = data?.due_time || '';
+  document.getElementById('schedAssignee').value = data?.assigned_to || 'admin';
+  document.getElementById('schedContactId').value = data?.contact_id || '';
+  document.getElementById('schedDesc').value = data?.description || '';
+  document.getElementById('scheduleModalTitle').textContent = data?.id ? 'Edit Activity' : 'Schedule Activity';
+  m.classList.add('open');
+}
+
+async function saveScheduledActivity() {
+  const editId = document.getElementById('schedEditId').value;
+  const body = {
+    subject: document.getElementById('schedSubject').value,
+    type: document.getElementById('schedType').value,
+    priority: document.getElementById('schedPriority').value,
+    due_date: document.getElementById('schedDueDate').value,
+    due_time: document.getElementById('schedDueTime').value,
+    assigned_to: document.getElementById('schedAssignee').value,
+    contact_id: document.getElementById('schedContactId').value,
+    description: document.getElementById('schedDesc').value,
+  };
+  if (!body.subject || !body.due_date) return alert('Subject and due date are required.');
+  const url = editId ? `/api/scheduled-activities/${editId}` : '/api/scheduled-activities';
+  const method = editId ? 'PUT' : 'POST';
+  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  document.getElementById('scheduleModal').classList.remove('open');
+  loadDashboard();
+}
+
+async function completeTask(id) {
+  await fetch(`/api/scheduled-activities/${id}`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status: 'completed' })
+  });
+  loadDashboard();
+}
+
+async function editScheduled(id) {
+  const tasks = await (await fetch('/api/scheduled-activities')).json();
+  const t = tasks.find(x => x.id === id);
+  if (t) openScheduleModal(t);
+}
+
+async function deleteScheduled(id) {
+  if (!confirm('Delete this scheduled activity?')) return;
+  await fetch(`/api/scheduled-activities/${id}`, { method: 'DELETE' });
+  loadDashboard();
+}
+
+// ── Create Contact / Company ──
+async function saveNewContact() {
+  const body = {};
+  ['firstname','lastname','email','phone','company','jobtitle','city','state','owner_name','lifecyclestage'].forEach(k => {
+    const el = document.getElementById('cc' + k.charAt(0).toUpperCase() + k.slice(1).replace('_n','N').replace('stage',''));
+    if (!el) return;
+    const map = {Firstname:'firstname',Lastname:'lastname',Email:'email',Phone:'phone',Company:'company',
+                 Jobtitle:'jobtitle',City:'city',State:'state',Owner:'owner_name',Lifecycle:'lifecyclestage'};
+    const field = map[el.id.replace('cc','')] || k;
+    if (el.value) body[field] = el.value;
+  });
+  if (!body.firstname && !body.lastname) return alert('First or last name is required.');
+  await fetch('/api/contacts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  document.getElementById('createContactModal').classList.remove('open');
+  loadContacts();
+}
+
+async function saveNewCompany() {
+  const body = {};
+  const fields = {coName:'name',coDomain:'domain',coIndustry:'industry',coCity:'city',coState:'state',coPhone:'phone',coOwner:'owner_name'};
+  for (const [id, field] of Object.entries(fields)) {
+    const v = document.getElementById(id).value;
+    if (v) body[field] = v;
+  }
+  if (!body.name) return alert('Company name is required.');
+  await fetch('/api/companies', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  document.getElementById('createCompanyModal').classList.remove('open');
+  loadCompanies();
+}
+
+// ── Reports ──
+let reportsInited = false;
+function initReports() {
+  if (reportsInited) return;
+  reportsInited = true;
+  fetch('/api/sales/publications').then(r => r.json()).then(pubs => {
+    const sel = document.getElementById('reportPub');
+    pubs.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  });
+  fetch('/api/sales/accounts?limit=1').then(r => r.json()).then(() => {
+    const repSel = document.getElementById('reportRep');
+    fetch('/api/sales/summary').then(r => r.json()).then(s => {
+      (s.rep_totals || []).forEach(rt => {
+        repSel.innerHTML += `<option value="${esc(rt.rep)}">${esc(rt.rep)}</option>`;
+      });
+    });
+  });
+  const yrSel = document.getElementById('reportYear');
+  const curYear = new Date().getFullYear();
+  for (let y = curYear; y >= curYear - 10; y--) {
+    yrSel.innerHTML += `<option value="${y}"${y === curYear ? ' selected' : ''}>${y}</option>`;
+  }
+  loadIssueDates();
+}
+
+async function loadIssueDates() {
+  const pub = document.getElementById('reportPub').value;
+  const year = document.getElementById('reportYear').value;
+  const params = new URLSearchParams();
+  if (pub) params.set('publication', pub);
+  if (year) params.set('year', year);
+  const dates = await (await fetch('/api/reports/issue-dates?' + params)).json();
+  const sel = document.getElementById('reportIssue');
+  sel.innerHTML = '<option value="">All Issues</option>';
+  dates.forEach(d => {
+    sel.innerHTML += `<option value="${esc(d.raw)}">${d.iso || d.raw}</option>`;
+  });
+}
+
+function switchReport() {
+  document.getElementById('reportOutput').innerHTML = '';
+  document.getElementById('reportResultCount').textContent = '';
+}
+
+let reportSort = { col: '', dir: 'asc' };
+let lastReportData = [];
+let lastReportType = '';
+
+function sortReportBy(col) {
+  if (reportSort.col === col) {
+    reportSort.dir = reportSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    reportSort.col = col;
+    reportSort.dir = 'asc';
+  }
+  renderReportTable(lastReportData, lastReportType);
+}
+
+function sortIndicator(col) {
+  if (reportSort.col !== col) return '';
+  return reportSort.dir === 'asc' ? ' &#9650;' : ' &#9660;';
+}
+
+function sortRows(rows, col, dir) {
+  return [...rows].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (typeof va === 'number' && typeof vb === 'number') return dir === 'asc' ? va - vb : vb - va;
+    va = (va || '').toString().toLowerCase();
+    vb = (vb || '').toString().toLowerCase();
+    return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+}
+
+function renderReportTable(rows, type) {
+  const output = document.getElementById('reportOutput');
+  const sorted = reportSort.col ? sortRows(rows, reportSort.col, reportSort.dir) : rows;
+
+  if (type === 'sales-by-issue') {
+    const total = rows.reduce((s, r) => s + (r.ad_cost || 0), 0);
+    const th = (label, col, align) => `<th style="${align ? 'text-align:right;' : ''}cursor:pointer;" onclick="sortReportBy('${col}')">${label}${sortIndicator(col)}</th>`;
+    output.innerHTML = `<table>
+      <thead><tr>${th('Publication','publication')}${th('Issue Date','issue_date_iso')}${th('Account','account_name')}${th('Agency','agency_name')}${th('Type','type_ad')}${th('Size','ad_size')}${th('Color','color')}${th('Cost','ad_cost',true)}${th('Rep','rep1')}${th('Booking','booking_status')}</tr></thead>
+      <tbody>${sorted.map(r => `<tr>
+        <td>${esc(r.publication||'')}</td><td>${r.issue_date_iso||''}</td><td>${esc(r.account_name||'')}</td>
+        <td>${esc(r.agency_name||'')}</td><td>${esc(r.type_ad||'')}</td><td>${esc(r.ad_size||'')}</td>
+        <td>${esc(r.color||'')}</td><td style="text-align:right">${fmtMoney(r.ad_cost)}</td><td>${esc(r.rep1||'')}</td>
+        <td><span class="${r.booking_status==='Confirmed'?'badge-confirmed':'badge-proposal'}">${esc(r.booking_status||'')}</span></td>
+      </tr>`).join('')}
+      <tr class="report-total"><td colspan="7">Total</td><td style="text-align:right">${fmtMoney(total)}</td><td colspan="2"></td></tr>
+      </tbody></table>`;
+  } else if (type === 'revenue-summary') {
+    const total = rows.reduce((s, r) => s + (r.total_revenue || 0), 0);
+    const th = (label, col, align) => `<th style="${align ? 'text-align:right;' : ''}cursor:pointer;" onclick="sortReportBy('${col}')">${label}${sortIndicator(col)}</th>`;
+    output.innerHTML = `<table>
+      <thead><tr>${th('Publication','publication')}${th('Issue Date','issue_date_iso')}${th('Insertions','insertion_count',true)}${th('Revenue','total_revenue',true)}${th('Net','total_net',true)}</tr></thead>
+      <tbody>${sorted.map(r => `<tr>
+        <td>${esc(r.publication||'')}</td><td>${r.issue_date_iso||''}</td>
+        <td style="text-align:right">${r.insertion_count}</td>
+        <td style="text-align:right">${fmtMoney(r.total_revenue)}</td>
+        <td style="text-align:right">${fmtMoney(r.total_net)}</td>
+      </tr>`).join('')}
+      <tr class="report-total"><td colspan="2">Total</td><td></td><td style="text-align:right">${fmtMoney(total)}</td><td></td></tr>
+      </tbody></table>`;
+  } else if (type === 'rep-performance') {
+    const byRep = {};
+    rows.forEach(r => { byRep[r.rep] = (byRep[r.rep] || 0) + r.revenue; });
+    const th = (label, col, align) => `<th style="${align ? 'text-align:right;' : ''}cursor:pointer;" onclick="sortReportBy('${col}')">${label}${sortIndicator(col)}</th>`;
+    output.innerHTML = `<table>
+      <thead><tr>${th('Rep','rep')}${th('Publication','publication')}${th('Insertions','insertions',true)}${th('Revenue','revenue',true)}</tr></thead>
+      <tbody>${sorted.map(r => `<tr>
+        <td>${esc(r.rep)}</td><td>${esc(r.publication)}</td>
+        <td style="text-align:right">${r.insertions}</td>
+        <td style="text-align:right">${fmtMoney(r.revenue)}</td>
+      </tr>`).join('')}
+      </tbody></table>
+      <div style="margin-top:16px;"><strong>Rep Totals:</strong>
+      ${Object.entries(byRep).sort((a,b)=>b[1]-a[1]).map(([rep,rev]) =>
+        `<span style="margin-right:16px;">${esc(rep)}: ${fmtMoney(rev)}</span>`
+      ).join('')}</div>`;
+  }
+}
+
+async function runReport() {
+  const type = document.getElementById('reportType').value;
+  const pub = document.getElementById('reportPub').value;
+  const year = document.getElementById('reportYear').value;
+  const issue = document.getElementById('reportIssue').value;
+  const rep = document.getElementById('reportRep').value;
+  const countEl = document.getElementById('reportResultCount');
+  reportSort = { col: '', dir: 'asc' };
+
+  const likelihood = document.getElementById('reportLikelihood').value;
+
+  if (type === 'sales-by-issue') {
+    const params = new URLSearchParams();
+    if (pub) params.set('publication', pub);
+    if (year) params.set('year', year);
+    if (issue) params.set('issue', issue);
+    if (rep) params.set('rep', rep);
+    if (likelihood) params.set('likelihood', likelihood);
+    const rows = await (await fetch('/api/reports/sales-by-issue?' + params)).json();
+    countEl.textContent = `${rows.length} insertion${rows.length !== 1 ? 's' : ''}`;
+    if (!rows.length) { document.getElementById('reportOutput').innerHTML = '<p style="color:var(--text3);">No results.</p>'; return; }
+    lastReportData = rows; lastReportType = type;
+    renderReportTable(rows, type);
+  } else if (type === 'revenue-summary') {
+    const params = new URLSearchParams({ year });
+    if (pub) params.set('publication', pub);
+    if (likelihood) params.set('likelihood', likelihood);
+    const rows = await (await fetch('/api/reports/revenue-summary?' + params)).json();
+    countEl.textContent = `${rows.length} issue/publication combinations`;
+    if (!rows.length) { document.getElementById('reportOutput').innerHTML = '<p style="color:var(--text3);">No results.</p>'; return; }
+    lastReportData = rows; lastReportType = type;
+    renderReportTable(rows, type);
+  } else if (type === 'rep-performance') {
+    const params = new URLSearchParams({ year });
+    if (pub) params.set('publication', pub);
+    if (likelihood) params.set('likelihood', likelihood);
+    const rows = await (await fetch('/api/reports/rep-performance?' + params)).json();
+    countEl.textContent = `${rows.length} rep/publication combinations`;
+    if (!rows.length) { document.getElementById('reportOutput').innerHTML = '<p style="color:var(--text3);">No results.</p>'; return; }
+    lastReportData = rows; lastReportType = type;
+    renderReportTable(rows, type);
+  }
+}
+
+function printReport() { window.print(); }
+
+// ══════════════════════════════════════
+// GLOBAL SEARCH
+// ══════════════════════════════════════
+let _gsTimeout = null;
+function debouncedGlobalSearch() {
+  clearTimeout(_gsTimeout);
+  _gsTimeout = setTimeout(globalSearch, 250);
+}
+async function globalSearch() {
+  const q = document.getElementById('globalSearchInput').value.trim();
+  const box = document.getElementById('globalSearchResults');
+  if (q.length < 2) { box.classList.remove('open'); return; }
+  const d = await (await fetch('/api/search?q=' + encodeURIComponent(q))).json();
+  let html = '';
+  if (!d.contacts.length && !d.companies.length && !d.accounts.length) {
+    html = '<div class="sr-empty">No results found</div>';
+  }
+  if (d.contacts.length) {
+    html += '<div class="sr-section">Contacts</div>';
+    d.contacts.forEach(c => {
+      const nm = [c.firstname, c.lastname].filter(Boolean).join(' ') || '—';
+      const ini = nm.split(' ').map(n=>(n||'')[0]).join('').toUpperCase().slice(0,2);
+      html += `<div class="sr-item" onclick="globalSearchGo('contact','${c.id}')">
+        <div class="sr-icon contact">${esc(ini)}</div>
+        <div><div class="sr-name">${esc(nm)}</div><div class="sr-detail">${esc(c.email||'')}${c.company ? ' &middot; '+esc(c.company) : ''}</div></div>
+      </div>`;
+    });
+  }
+  if (d.companies.length) {
+    html += '<div class="sr-section">Companies</div>';
+    d.companies.forEach(c => {
+      html += `<div class="sr-item" onclick="globalSearchGo('company','${c.id}')">
+        <div class="sr-icon company">${esc((c.name||'?')[0])}</div>
+        <div><div class="sr-name">${esc(c.name)}</div><div class="sr-detail">${[c.domain,c.industry,[c.city,c.state].filter(Boolean).join(', ')].filter(Boolean).join(' &middot; ')}</div></div>
+      </div>`;
+    });
+  }
+  if (d.accounts.length) {
+    html += '<div class="sr-section">Ad Sales Accounts</div>';
+    d.accounts.forEach(a => {
+      html += `<div class="sr-item" onclick="globalSearchGo('account','${a.id}')">
+        <div class="sr-icon account">$</div>
+        <div><div class="sr-name">${esc(a.company)}</div><div class="sr-detail">${[a.city,a.state].filter(Boolean).join(', ')}</div></div>
+      </div>`;
+    });
+  }
+  box.innerHTML = html;
+  box.classList.add('open');
+}
+function globalSearchGo(type, id) {
+  document.getElementById('globalSearchResults').classList.remove('open');
+  document.getElementById('globalSearchInput').value = '';
+  if (type === 'contact') { showTab('contacts'); setTimeout(() => openContact(id), 100); }
+  else if (type === 'company') { showTab('companies'); setTimeout(() => openCompany(id), 100); }
+  else if (type === 'account') { showTab('sales'); setTimeout(() => openSalesDetail(parseInt(id)), 100); }
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.global-search')) document.getElementById('globalSearchResults').classList.remove('open');
+});
+
+// ══════════════════════════════════════
+// PIPELINE
+// ══════════════════════════════════════
+let pipelineData = null;
+async function loadPipeline() {
+  const d = await (await fetch('/api/pipeline')).json();
+  pipelineData = d;
+  document.getElementById('pipelineStats').innerHTML = `
+    <div class="pipeline-stat">
+      <div class="ps-val">${fmtMoney(d.confirmed_stats.revenue)}</div>
+      <div class="ps-label">Confirmed Revenue (${d.confirmed_stats.count} insertions)</div>
+    </div>
+    <div class="pipeline-stat proposal">
+      <div class="ps-val">${fmtMoney(d.proposal_stats.revenue)}</div>
+      <div class="ps-label">Proposal Revenue (${d.proposal_stats.count} insertions)</div>
+    </div>
+    <div class="pipeline-stat">
+      <div class="ps-val">${Math.round(d.confirmed_stats.revenue / (d.confirmed_stats.revenue + d.proposal_stats.revenue) * 100) || 0}%</div>
+      <div class="ps-label">Conversion Rate (by revenue)</div>
+    </div>
+    <div class="pipeline-stat proposal">
+      <div class="ps-val">${d.lapsed_accounts.length}</div>
+      <div class="ps-label">Lapsed Accounts (had sales last year)</div>
+    </div>
+  `;
+  renderPipelineTab('proposals');
+}
+
+function switchPipelineTab(tab, el) {
+  document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPipelineTab(tab);
+}
+
+function renderPipelineTab(tab) {
+  const d = pipelineData;
+  const out = document.getElementById('pipelineContent');
+  if (tab === 'proposals') {
+    const grouped = {};
+    d.proposals.forEach(p => {
+      const key = p.account_name;
+      if (!grouped[key]) grouped[key] = { account_name: key, account_id: p.account_id, items: [], total: 0 };
+      grouped[key].items.push(p);
+      grouped[key].total += (p.ad_cost || 0);
+    });
+    const accounts = Object.values(grouped).sort((a,b) => b.total - a.total);
+    out.innerHTML = `<p style="color:var(--text2);margin-bottom:12px;">${d.proposals.length} open proposals across ${accounts.length} accounts totaling ${fmtMoney(d.proposal_stats.revenue)}</p>
+    <table><thead><tr><th>Account</th><th>Publication</th><th>Issue Date</th><th>Type</th><th>Size</th><th style="text-align:right;">Value</th><th>Rep</th></tr></thead>
+    <tbody>${d.proposals.map(p => `<tr class="clickable" onclick="${p.account_id ? `showTab('sales');openSalesDetail(${p.account_id})` : ''}">
+      <td>${esc(p.account_name||'')}</td><td>${esc(p.publication||'')}</td><td>${p.issue_date_iso||''}</td>
+      <td>${esc(p.type_ad||'')}</td><td>${esc(p.ad_size||'')}</td>
+      <td style="text-align:right;font-weight:600;">${fmtMoney(p.ad_cost)}</td><td>${esc(p.rep1||'')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  } else if (tab === 'byIssue') {
+    out.innerHTML = `<table><thead><tr><th>Publication</th><th>Issue Date</th><th style="text-align:right;">Confirmed</th><th style="text-align:right;">Proposals</th><th style="text-align:right;">Confirmed Rev</th><th style="text-align:right;">Proposal Rev</th><th style="text-align:right;">Total</th></tr></thead>
+    <tbody>${d.issue_pipeline.map(r => `<tr>
+      <td>${esc(r.publication)}</td><td>${r.issue_date_iso}</td>
+      <td style="text-align:right;">${r.confirmed}</td><td style="text-align:right;">${r.proposals}</td>
+      <td style="text-align:right;">${fmtMoney(r.confirmed_rev)}</td>
+      <td style="text-align:right;color:#92400e;">${fmtMoney(r.proposal_rev)}</td>
+      <td style="text-align:right;font-weight:600;">${fmtMoney((r.confirmed_rev||0)+(r.proposal_rev||0))}</td>
+    </tr>`).join('')}</tbody></table>`;
+  } else if (tab === 'byRep') {
+    out.innerHTML = `<table><thead><tr><th>Rep</th><th style="text-align:right;">Open Proposals</th><th style="text-align:right;">Proposal Value</th></tr></thead>
+    <tbody>${d.proposals_by_rep.map(r => `<tr>
+      <td>${esc(r.rep)}</td><td style="text-align:right;">${r.proposals}</td>
+      <td style="text-align:right;font-weight:600;">${fmtMoney(r.value)}</td>
+    </tr>`).join('')}</tbody></table>`;
+  } else if (tab === 'lapsed') {
+    out.innerHTML = d.lapsed_accounts.length ?
+      `<p style="color:var(--text2);margin-bottom:12px;">Accounts that advertised last year but have no ${new Date().getFullYear()} insertions or proposals</p>
+      <table><thead><tr><th>Account</th><th style="text-align:right;">Last Year Insertions</th><th style="text-align:right;">Last Year Revenue</th></tr></thead>
+      <tbody>${d.lapsed_accounts.map(r => `<tr>
+        <td>${esc(r.account_name)}</td><td style="text-align:right;">${r.insertions}</td>
+        <td style="text-align:right;font-weight:600;">${fmtMoney(r.revenue)}</td>
+      </tr>`).join('')}</tbody></table>` :
+      '<p style="color:var(--text3);padding:20px;">No lapsed accounts found — all prior-year advertisers have current activity.</p>';
+  }
+}
+
+// ══════════════════════════════════════
+// EMAIL LOG
+// ══════════════════════════════════════
+function openEmailLogModal(contactId, companyId) {
+  document.getElementById('actModalContactId').value = contactId || '';
+  document.getElementById('actModalCompanyId').value = companyId || '';
+  document.getElementById('actModalType').value = 'emails';
+  document.getElementById('actModalSubject').value = '';
+  document.getElementById('actModalBody').value = '';
+  document.getElementById('addActivityModal').classList.add('open');
+  document.getElementById('actModalSubject').focus();
+}
+
+// ══════════════════════════════════════
+// PRODUCTION / MATERIALS
+// ══════════════════════════════════════
+let prodData = null;
+let prodPubsLoaded = false;
+async function loadProduction() {
+  if (!prodPubsLoaded) {
+    const pubs = await (await fetch('/api/sales/publications')).json();
+    const sel = document.getElementById('prodPubFilter');
+    pubs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+    prodPubsLoaded = true;
+  }
+  const pub = document.getElementById('prodPubFilter').value;
+  const params = pub ? '?publication=' + encodeURIComponent(pub) : '';
+  const d = await (await fetch('/api/production' + params)).json();
+  prodData = d;
+  const s = d.summary;
+  document.getElementById('prodStats').innerHTML = `
+    <div class="prod-stat received"><div class="ps-val">${s.materials_received}</div><div class="ps-label">Materials Received</div></div>
+    <div class="prod-stat missing"><div class="ps-val">${s.materials_missing}</div><div class="ps-label">Missing (Expected)</div></div>
+    <div class="prod-stat pending"><div class="ps-val">${s.not_expecting_materials||0}</div><div class="ps-label">Not Expected Yet</div></div>
+    <div class="prod-stat"><div class="ps-val">${s.expecting_materials||0}</div><div class="ps-label">Total Confirmed</div></div>
+  `;
+  renderProdTab('missing');
+}
+function switchProdTab(tab, el) {
+  document.querySelectorAll('#prodTabs .pipeline-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderProdTab(tab);
+}
+function renderProdTab(tab) {
+  const out = document.getElementById('prodContent');
+  if (tab === 'missing') {
+    const items = prodData.missing_materials;
+    out.innerHTML = items.length ?
+      `<p style="color:var(--text2);margin-bottom:12px;">${items.length} insertions expecting materials that haven't arrived</p>
+      <table><thead><tr><th>Account</th><th>Publication</th><th>Issue Date</th><th>Type</th><th>Size</th><th>Due Date</th><th>Tracking</th></tr></thead>
+      <tbody>${items.map(i => `<tr>
+        <td>${esc(i.account_name)}</td><td>${esc(i.publication)}</td><td>${i.issue_date_iso||''}</td>
+        <td>${esc(i.type_ad||'')}</td><td>${esc(i.ad_size||'')}</td>
+        <td>${i.mat_due_date||'—'}</td><td>${esc(i.mat_track_num||'—')}</td>
+      </tr>`).join('')}</tbody></table>` :
+      '<p style="color:var(--text3);padding:20px;">All expected materials have been received.</p>';
+  } else {
+    out.innerHTML = `<table><thead><tr><th>Publication</th><th>Issue Date</th><th style="text-align:right;">Total</th><th style="text-align:right;">Received</th><th style="text-align:right;">Missing</th><th style="text-align:right;">Complete</th></tr></thead>
+    <tbody>${prodData.by_issue.map(r => {
+      const pct = r.pct_complete;
+      const color = pct >= 100 ? '#166534' : pct >= 50 ? '#92400e' : '#dc2626';
+      return `<tr>
+        <td>${esc(r.publication)}</td><td>${r.issue_date_iso}</td>
+        <td style="text-align:right;">${r.total}</td>
+        <td style="text-align:right;">${r.materials_received}</td>
+        <td style="text-align:right;${r.materials_missing?'color:#dc2626;font-weight:600;':''}">${r.materials_missing}</td>
+        <td style="text-align:right;color:${color};font-weight:600;">${pct}%</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  }
+}
+
+// ══════════════════════════════════════
+// BILLING
+// ══════════════════════════════════════
+let billingData = null;
+let billingPubsLoaded = false;
+async function loadBilling() {
+  if (!billingPubsLoaded) {
+    const pubs = await (await fetch('/api/sales/publications')).json();
+    const sel = document.getElementById('billingPubFilter');
+    pubs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+    billingPubsLoaded = true;
+  }
+  const pub = document.getElementById('billingPubFilter').value;
+  const params = pub ? '?publication=' + encodeURIComponent(pub) : '';
+  const d = await (await fetch('/api/billing' + params)).json();
+  billingData = d;
+  const s = d.summary;
+  document.getElementById('billingStats').innerHTML = `
+    <div class="prod-stat received"><div class="ps-val">${fmtMoney(s.total_revenue)}</div><div class="ps-label">Total Billed Revenue</div></div>
+    <div class="prod-stat"><div class="ps-val">${s.total_billed}</div><div class="ps-label">Billed Insertions</div></div>
+    <div class="prod-stat missing"><div class="ps-val">${s.total_unbilled}</div><div class="ps-label">Unbilled Insertions</div></div>
+    <div class="prod-stat pending"><div class="ps-val">${fmtMoney(s.outstanding)}</div><div class="ps-label">Outstanding (Unpaid)</div></div>
+  `;
+  renderBillingTab('unbilled');
+}
+function switchBillingTab(tab, el) {
+  document.querySelectorAll('#billingTabs .pipeline-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderBillingTab(tab);
+}
+function renderBillingTab(tab) {
+  const out = document.getElementById('billingContent');
+  if (tab === 'unbilled') {
+    const items = billingData.unbilled;
+    out.innerHTML = items.length ?
+      `<p style="color:var(--text2);margin-bottom:12px;">${items.length} confirmed insertions with no bill amount</p>
+      <table><thead><tr><th>Account</th><th>Publication</th><th>Issue Date</th><th>Type</th><th>Size</th><th style="text-align:right;">Rate Card</th><th>Rep</th></tr></thead>
+      <tbody>${items.map(i => `<tr>
+        <td>${esc(i.account_name)}</td><td>${esc(i.publication||'')}</td><td>${i.issue_date_iso||''}</td>
+        <td>${esc(i.type_ad||'')}</td><td>${esc(i.ad_size||'')}</td>
+        <td style="text-align:right;">${fmtMoney(i.ad_cost)}</td><td>${esc(i.rep1||'')}</td>
+      </tr>`).join('')}</tbody></table>` :
+      '<p style="color:var(--text3);padding:20px;">All confirmed insertions have been billed.</p>';
+  } else {
+    const items = billingData.unpaid;
+    out.innerHTML = items.length ?
+      `<p style="color:var(--text2);margin-bottom:12px;">${items.length} invoiced insertions with no payment recorded</p>
+      <table><thead><tr><th>Account</th><th>Invoice #</th><th>Invoice Date</th><th>Publication</th><th>Issue Date</th><th style="text-align:right;">Amount</th></tr></thead>
+      <tbody>${items.map(i => `<tr>
+        <td>${esc(i.account_name)}</td><td>${esc(i.invoice_num)}</td><td>${i.invoice_date_iso||''}</td>
+        <td>${esc(i.publication||'')}</td><td>${i.issue_date_iso||''}</td>
+        <td style="text-align:right;font-weight:600;">${fmtMoney(i.bill_cost)}</td>
+      </tr>`).join('')}</tbody></table>` :
+      '<p style="color:var(--text3);padding:20px;">All invoiced insertions have been paid.</p>';
+  }
+}
+
+// ══════════════════════════════════════
+// PRODUCTION CALENDAR
+// ══════════════════════════════════════
+let calData = null;
+let calYear, calMonthIdx;
+let calPubsLoaded = false;
+(function() { const n = new Date(); calYear = n.getFullYear(); calMonthIdx = n.getMonth(); })();
+
+async function loadCalendar() {
+  if (!calPubsLoaded) {
+    const pubs = await (await fetch('/api/sales/publications')).json();
+    const sel = document.getElementById('calPubFilter');
+    pubs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+    calPubsLoaded = true;
+  }
+  const pub = document.getElementById('calPubFilter').value;
+  const params = pub ? '?publication=' + encodeURIComponent(pub) : '';
+  const d = await (await fetch('/api/production/calendar' + params)).json();
+  calData = {};
+  d.forEach(item => { calData[item.issue_date_iso] = item; });
+  renderCalendar();
+}
+function calMonth(dir) { calMonthIdx += dir; if (calMonthIdx > 11) { calMonthIdx = 0; calYear++; } if (calMonthIdx < 0) { calMonthIdx = 11; calYear--; } renderCalendar(); }
+function calToday() { const n = new Date(); calYear = n.getFullYear(); calMonthIdx = n.getMonth(); renderCalendar(); }
+function renderCalendar() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calTitle').textContent = `${months[calMonthIdx]} ${calYear}`;
+  const first = new Date(calYear, calMonthIdx, 1);
+  const last = new Date(calYear, calMonthIdx + 1, 0);
+  const startDay = first.getDay();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-header">${d}</div>`).join('');
+  for (let i = 0; i < startDay; i++) html += '<div class="cal-day empty"></div>';
+  for (let d = 1; d <= last.getDate(); d++) {
+    const dt = new Date(calYear, calMonthIdx, d);
+    const iso = `${calYear}-${String(calMonthIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dt.getTime() === today.getTime();
+    const ev = calData[iso];
+    let evHtml = '';
+    if (ev) {
+      if (ev.confirmed) evHtml += `<div class="cal-event confirmed">${ev.confirmed} confirmed</div>`;
+      if (ev.proposals) evHtml += `<div class="cal-event proposal">${ev.proposals} proposals</div>`;
+      if (ev.materials_missing) evHtml += `<div class="cal-event missing-mat">${ev.materials_missing} missing mat</div>`;
+      if (ev.revenue) evHtml += `<div class="cal-event" style="background:var(--cream);color:var(--text);">${fmtMoney(ev.revenue)}</div>`;
+    }
+    html += `<div class="cal-day${isToday ? ' today' : ''}"><div class="day-num">${d}</div>${evHtml}</div>`;
+  }
+  const remaining = (7 - ((startDay + last.getDate()) % 7)) % 7;
+  for (let i = 0; i < remaining; i++) html += '<div class="cal-day empty"></div>';
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+// ══════════════════════════════════════
+// BULK ACTIONS
+// ══════════════════════════════════════
+let bulkSelected = new Set();
+function toggleBulkMode() {
+  const bar = document.getElementById('bulkBar');
+  if (bar.classList.contains('active')) {
+    bar.classList.remove('active');
+    bulkSelected.clear();
+  } else {
+    bar.classList.add('active');
+  }
+  updateBulkCount();
+  loadContacts();
+}
+function toggleBulkItem(id, cb, e) {
+  e.stopPropagation();
+  if (cb.checked) bulkSelected.add(id); else bulkSelected.delete(id);
+  cb.closest('tr').style.background = cb.checked ? 'rgba(140,212,79,.1)' : '';
+  updateBulkCount();
+}
+function toggleBulkAll(cb) {
+  document.querySelectorAll('.bulk-cb:not(#bulkSelectAll)').forEach(c => {
+    c.checked = cb.checked;
+    const id = c.dataset.id;
+    if (cb.checked) bulkSelected.add(id); else bulkSelected.delete(id);
+    c.closest('tr').style.background = cb.checked ? 'rgba(140,212,79,.1)' : '';
+  });
+  updateBulkCount();
+}
+function updateBulkCount() {
+  document.getElementById('bulkCount').textContent = `${bulkSelected.size} selected`;
+}
+async function bulkExport() {
+  if (!bulkSelected.size) return;
+  const resp = await fetch('/api/contacts/bulk', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ids: [...bulkSelected], action: 'export' })
+  });
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'contacts_export.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+async function bulkDelete() {
+  if (!bulkSelected.size || !confirm(`Delete ${bulkSelected.size} contacts? This cannot be undone.`)) return;
+  await fetch('/api/contacts/bulk', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ids: [...bulkSelected], action: 'delete' })
+  });
+  bulkSelected.clear();
+  document.getElementById('bulkBar').classList.remove('active');
+  loadContacts();
+}
+async function bulkAddToList() {
+  const listId = prompt('Enter list ID to add contacts to:');
+  if (!listId) return;
+  await fetch('/api/contacts/bulk', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ids: [...bulkSelected], action: 'add_to_list', list_id: parseInt(listId) })
+  });
+  alert(`${bulkSelected.size} contacts added to list.`);
+}
+
+// ══════════════════════════════════════
+// NOTES
+// ══════════════════════════════════════
+async function loadNotes(entityType, entityId, containerId) {
+  const d = await (await fetch(`/api/notes?entity_type=${entityType}&entity_id=${entityId}`)).json();
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = d.map(n =>
+    `<div class="note-card">
+      <div class="note-meta">${esc(n.created_by)} &middot; ${n.created_at ? formatDate(n.created_at) : ''}</div>
+      <div class="note-text">${esc(n.content)}</div>
+      <span class="note-del" onclick="deleteNote(${n.id},'${entityType}','${entityId}','${containerId}')">&#10005;</span>
+    </div>`
+  ).join('') || '<p style="color:var(--text3);font-size:12px;">No notes yet</p>';
+}
+async function addNote(entityType, entityId, containerId) {
+  const textarea = document.getElementById(containerId + '_input');
+  const content = textarea.value.trim();
+  if (!content) return;
+  await fetch('/api/notes', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ entity_type: entityType, entity_id: entityId, content: content })
+  });
+  textarea.value = '';
+  loadNotes(entityType, entityId, containerId);
+}
+async function deleteNote(id, entityType, entityId, containerId) {
+  if (!confirm('Delete this note?')) return;
+  await fetch('/api/notes/' + id, { method: 'DELETE' });
+  loadNotes(entityType, entityId, containerId);
+}
+
+// ══════════════════════════════════════
+// AUDIT TRAIL
+// ══════════════════════════════════════
+async function loadAuditTrail(entityType, entityId, containerId, limit) {
+  const params = new URLSearchParams();
+  if (entityType) params.set('entity_type', entityType);
+  if (entityId) params.set('entity_id', entityId);
+  if (limit) params.set('limit', limit);
+  const d = await (await fetch('/api/audit?' + params)).json();
+  const entries = d.entries || d;
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = entries.length ? entries.map(a =>
+    `<div class="audit-row">
+      <span class="audit-action">${esc(a.action)}</span>
+      <span>${esc(a.entity_type||'')} ${esc(a.entity_id||'')}</span>
+      <span class="audit-detail" title="${esc(a.details||'')}">${esc(a.details||'')}</span>
+      <span class="audit-time" style="margin-left:auto;">${a.timestamp ? formatDate(a.timestamp) : ''}</span>
+    </div>`
+  ).join('') : '<p style="color:var(--text3);font-size:12px;">No audit entries</p>';
+}
+
 // ADMIN
 // ══════════════════════════════════════
 let adminInited = false;
@@ -3092,6 +4469,19 @@ async function initAdmin() {
   if (adminInited) return;
   adminInited = true;
   loadAdminLookup('publications');
+}
+
+function navToAdminPanel(panelId) {
+  adminInited = true;
+  const link = document.querySelector(`.admin-sidebar a[onclick*="${panelId}"]`);
+  if (link) switchAdminPanel(link, panelId);
+  else {
+    document.querySelectorAll('.admin-panel-content').forEach(p => p.style.display = 'none');
+    document.getElementById(panelId).style.display = '';
+    document.querySelectorAll('.admin-sidebar a').forEach(a => a.classList.remove('active'));
+    if (panelId === 'adminUsers') loadAdminUsers();
+    else if (panelId === 'adminSettings') loadAdminSettings();
+  }
 }
 
 function switchAdminPanel(el, panelId) {

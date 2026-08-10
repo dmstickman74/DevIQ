@@ -32,6 +32,7 @@ def init_db():
         description TEXT DEFAULT '',
         target TEXT NOT NULL DEFAULT 'contacts',
         filters TEXT NOT NULL,
+        created_by TEXT DEFAULT 'admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
@@ -80,6 +81,33 @@ def init_db():
         target_amount REAL NOT NULL DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now'))
     )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS scheduled_activities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contact_id TEXT,
+        company_id TEXT,
+        type TEXT NOT NULL DEFAULT 'task',
+        subject TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        due_date TEXT NOT NULL,
+        due_time TEXT DEFAULT '',
+        assigned_to TEXT DEFAULT 'admin',
+        priority TEXT DEFAULT 'normal',
+        status TEXT DEFAULT 'pending',
+        completed_at TEXT,
+        created_by TEXT DEFAULT 'admin',
+        created_at TEXT DEFAULT (datetime('now'))
+    )""")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_sched_due ON scheduled_activities(due_date)")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_sched_status ON scheduled_activities(status)")
+    # Migrate: add columns that may be missing on older databases
+    c = db.cursor()
+    for tbl, col, col_def in [
+        ('marketing_lists', 'created_by', "TEXT DEFAULT 'admin'"),
+    ]:
+        c.execute(f"PRAGMA table_info({tbl})")
+        existing = {row[1] for row in c.fetchall()}
+        if col not in existing:
+            db.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_def}")
     c = db.cursor()
     c.execute("SELECT COUNT(*) FROM admin_users")
     if c.fetchone()[0] == 0:
@@ -176,6 +204,362 @@ def stats():
     result["owners"] = c.fetchone()[0]
     c.execute("SELECT type, COUNT(*) as cnt FROM activities GROUP BY type ORDER BY cnt DESC")
     result["activity_breakdown"] = {r["type"]: r["cnt"] for r in c.fetchall()}
+    db.close()
+    return jsonify(result)
+
+def _parse_sm_date(d):
+    """Parse MM/DD/YY HH:MM:SS to ISO date string."""
+    if not d:
+        return None
+    try:
+        parts = d.split(" ")[0].split("/")
+        m, day, y = int(parts[0]), int(parts[1]), int(parts[2])
+        y = y + 2000 if y < 100 else y
+        return f"{y:04d}-{m:02d}-{day:02d}"
+    except Exception:
+        return None
+
+@app.route("/api/dashboard")
+def dashboard():
+    db = get_db()
+    c = db.cursor()
+    result = {}
+    c.execute("SELECT COUNT(*) FROM contacts")
+    result["total_contacts"] = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM companies")
+    result["total_companies"] = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM sm_contracts")
+    result["total_contracts"] = c.fetchone()[0]
+
+    c.execute("""SELECT a.type, a.subject, a.timestamp, a.owner_name,
+                 a.contact_id, c.firstname, c.lastname, c.company
+                 FROM activities a LEFT JOIN contacts c ON a.contact_id = c.id
+                 ORDER BY a.timestamp DESC LIMIT 15""")
+    result["recent_activities"] = [dict(r) for r in c.fetchall()]
+
+    c.execute("""SELECT id, contact_id, company_id, type, subject, description,
+                 due_date, due_time, assigned_to, priority, status
+                 FROM scheduled_activities WHERE status = 'pending'
+                 ORDER BY due_date ASC, due_time ASC LIMIT 15""")
+    result["upcoming_tasks"] = [dict(r) for r in c.fetchall()]
+
+    c.execute("""SELECT id, contact_id, company_id, type, subject, due_date, status, completed_at
+                 FROM scheduled_activities WHERE status = 'completed'
+                 ORDER BY completed_at DESC LIMIT 10""")
+    result["completed_tasks"] = [dict(r) for r in c.fetchall()]
+
+    overdue = c.execute("""SELECT COUNT(*) FROM scheduled_activities
+                           WHERE status = 'pending' AND due_date < date('now')""").fetchone()[0]
+    result["overdue_tasks"] = overdue
+
+    c.execute("SELECT id, name, description, created_at, created_by FROM marketing_lists ORDER BY created_at DESC LIMIT 5")
+    result["recent_lists"] = [dict(r) for r in c.fetchall()]
+
+    c.execute("""SELECT ph.publication, ph.issue_date, ph.account_name, ph.ad_cost,
+                 ph.type_ad, ph.ad_size, sc.id as account_id
+                 FROM sm_page_history ph
+                 LEFT JOIN sm_companies sc ON ph.account_name = sc.company
+                 WHERE ph.canceled = 0
+                 ORDER BY ph.created_date DESC LIMIT 10""")
+    recent_sales = []
+    for r in c.fetchall():
+        row = dict(r)
+        row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
+        recent_sales.append(row)
+    result["recent_sales"] = recent_sales
+
+    db.close()
+    return jsonify(result)
+
+# ── Scheduled Activities ──
+@app.route("/api/scheduled-activities")
+def list_scheduled_activities():
+    db = get_db()
+    status = request.args.get("status", "")
+    assigned = request.args.get("assigned_to", "")
+    where, params = ["1=1"], []
+    if status:
+        where.append("status = ?")
+        params.append(status)
+    if assigned:
+        where.append("assigned_to = ?")
+        params.append(assigned)
+    rows = db.execute(f"""SELECT sa.*, c.firstname, c.lastname, c.company as contact_company
+                          FROM scheduled_activities sa
+                          LEFT JOIN contacts c ON sa.contact_id = c.id
+                          WHERE {' AND '.join(where)}
+                          ORDER BY CASE WHEN sa.status='pending' THEN 0 ELSE 1 END,
+                                   sa.due_date ASC, sa.due_time ASC""", params).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/scheduled-activities", methods=["POST"])
+def create_scheduled_activity():
+    data = request.get_json()
+    db = get_db()
+    db.execute("""INSERT INTO scheduled_activities
+                  (contact_id, company_id, type, subject, description, due_date, due_time,
+                   assigned_to, priority, created_by)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               (data.get("contact_id", ""), data.get("company_id", ""),
+                data.get("type", "task"), data["subject"], data.get("description", ""),
+                data["due_date"], data.get("due_time", ""),
+                data.get("assigned_to", "admin"), data.get("priority", "normal"),
+                data.get("created_by", "admin")))
+    db.commit()
+    aid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    log_audit(db, "create", "scheduled_activity", str(aid), data.get("subject", ""), "admin")
+    db.close()
+    return jsonify({"id": aid})
+
+@app.route("/api/scheduled-activities/<int:aid>", methods=["PUT"])
+def update_scheduled_activity(aid):
+    data = request.get_json()
+    db = get_db()
+    sets, params = [], []
+    for k in ("subject", "description", "due_date", "due_time", "assigned_to",
+              "priority", "status", "type", "contact_id", "company_id"):
+        if k in data:
+            sets.append(f"{k} = ?")
+            params.append(data[k])
+    if data.get("status") == "completed":
+        sets.append("completed_at = datetime('now')")
+    if sets:
+        params.append(aid)
+        db.execute(f"UPDATE scheduled_activities SET {', '.join(sets)} WHERE id = ?", params)
+        db.commit()
+        log_audit(db, "update", "scheduled_activity", str(aid), json.dumps(data), "admin")
+    db.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/scheduled-activities/<int:aid>", methods=["DELETE"])
+def delete_scheduled_activity(aid):
+    db = get_db()
+    db.execute("DELETE FROM scheduled_activities WHERE id = ?", (aid,))
+    db.commit()
+    log_audit(db, "delete", "scheduled_activity", str(aid), "", "admin")
+    db.close()
+    return jsonify({"ok": True})
+
+# ── Create Contact / Company ──
+@app.route("/api/contacts", methods=["POST"])
+def create_contact():
+    data = request.get_json()
+    db = get_db()
+    cid = data.get("id") or f"local-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+    cols = ["id"]
+    vals = [cid]
+    for k in ("firstname", "lastname", "email", "phone", "company", "jobtitle",
+              "city", "state", "country", "owner_name", "lifecyclestage", "hs_lead_status"):
+        if k in data:
+            cols.append(k)
+            vals.append(data[k])
+    cols.append("createdate")
+    vals.append(datetime.now().isoformat())
+    placeholders = ", ".join(["?"] * len(cols))
+    col_str = ", ".join(cols)
+    db.execute(f"INSERT INTO contacts ({col_str}) VALUES ({placeholders})", vals)
+    db.commit()
+    log_audit(db, "create", "contact", cid, f"{data.get('firstname','')} {data.get('lastname','')}", "admin")
+    db.close()
+    return jsonify({"id": cid})
+
+@app.route("/api/companies", methods=["POST"])
+def create_company():
+    data = request.get_json()
+    db = get_db()
+    cid = data.get("id") or f"local-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+    cols = ["id"]
+    vals = [cid]
+    for k in ("name", "domain", "industry", "city", "state", "country",
+              "phone", "owner_name"):
+        if k in data:
+            cols.append(k)
+            vals.append(data[k])
+    cols.append("createdate")
+    vals.append(datetime.now().isoformat())
+    placeholders = ", ".join(["?"] * len(cols))
+    col_str = ", ".join(cols)
+    db.execute(f"INSERT INTO companies ({col_str}) VALUES ({placeholders})", vals)
+    db.commit()
+    log_audit(db, "create", "company", cid, data.get("name", ""), "admin")
+    db.close()
+    return jsonify({"id": cid})
+
+# ── Sales by Issue Report ──
+@app.route("/api/reports/sales-by-issue")
+def report_sales_by_issue():
+    db = get_db()
+    pub = request.args.get("publication", "")
+    year = request.args.get("year", "")
+    issue = request.args.get("issue", "")
+    rep = request.args.get("rep", "")
+    ad_type = request.args.get("ad_type", "")
+    where, params = ["canceled = 0"], []
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    if year:
+        where.append("issue_date LIKE ?")
+        params.append(f"%/{year[2:]} %")
+    if issue:
+        where.append("issue_date = ?")
+        params.append(issue)
+    if rep:
+        where.append("rep1 = ?")
+        params.append(rep)
+    if ad_type:
+        where.append("type_ad = ?")
+        params.append(ad_type)
+    likelihood = request.args.get("likelihood", "")
+    if likelihood == "confirmed":
+        where.append("likelihood = 1")
+    elif likelihood == "proposal":
+        where.append("likelihood = 10")
+    sort = request.args.get("sort", "publication,issue_date,account_name")
+    allowed_sorts = {"publication","issue_date","account_name","agency_name","type_ad","ad_size","color","ad_cost","net_cost","rep1"}
+    sort_parts = []
+    for s in sort.split(","):
+        s = s.strip()
+        desc = False
+        if s.startswith("-"):
+            s = s[1:]
+            desc = True
+        if s in allowed_sorts:
+            sort_parts.append(f"{s} {'DESC' if desc else 'ASC'}")
+    order_by = ", ".join(sort_parts) if sort_parts else "publication, issue_date, account_name"
+    rows = db.execute(f"""SELECT publication, issue_date, account_name, agency_name,
+                          type_ad, ad_size, color, ad_cost, net_cost, rep1,
+                          contract_num, order_num
+                          , likelihood
+                          FROM sm_page_history
+                          WHERE {' AND '.join(where)}
+                          ORDER BY {order_by}""", params).fetchall()
+    result = []
+    for r in rows:
+        row = dict(r)
+        row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
+        row["booking_status"] = "Confirmed" if row.get("likelihood") == 1 else "Proposal"
+        result.append(row)
+    db.close()
+    return jsonify(result)
+
+@app.route("/api/reports/issue-dates")
+def report_issue_dates():
+    db = get_db()
+    pub = request.args.get("publication", "")
+    year = request.args.get("year", "")
+    where, params = ["canceled = 0"], []
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    if year:
+        where.append("issue_date LIKE ?")
+        params.append(f"%/{year[2:]} %")
+    rows = db.execute(f"""SELECT DISTINCT issue_date FROM sm_page_history
+                          WHERE {' AND '.join(where)}
+                          ORDER BY issue_date""", params).fetchall()
+    result = []
+    for r in rows:
+        result.append({"raw": r["issue_date"], "iso": _parse_sm_date(r["issue_date"])})
+    db.close()
+    return jsonify(result)
+
+@app.route("/api/reports/revenue-summary")
+def report_revenue_summary():
+    db = get_db()
+    c = db.cursor()
+    year = request.args.get("year", "26")
+    if len(year) == 4:
+        year = year[2:]
+    pub = request.args.get("publication", "")
+    likelihood = request.args.get("likelihood", "")
+    where = ["canceled = 0", "issue_date LIKE ?"]
+    params = [f"%/{year} %"]
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    if likelihood == "confirmed":
+        where.append("likelihood = 1")
+    elif likelihood == "proposal":
+        where.append("likelihood = 10")
+    rows = c.execute(f"""SELECT publication, issue_date, COUNT(*) as insertion_count,
+                        SUM(ad_cost) as total_revenue, SUM(net_cost) as total_net
+                        FROM sm_page_history
+                        WHERE {' AND '.join(where)}
+                        GROUP BY publication, issue_date
+                        ORDER BY publication, issue_date""",
+                     params).fetchall()
+    result = []
+    for r in rows:
+        row = dict(r)
+        row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
+        result.append(row)
+    db.close()
+    return jsonify(result)
+
+@app.route("/api/reports/rep-performance")
+def report_rep_performance():
+    db = get_db()
+    year = request.args.get("year", "26")
+    if len(year) == 4:
+        year = year[2:]
+    pub = request.args.get("publication", "")
+    likelihood = request.args.get("likelihood", "")
+    where = ["canceled = 0", "issue_date LIKE ?", "rep1 != ''"]
+    params = [f"%/{year} %"]
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    if likelihood == "confirmed":
+        where.append("likelihood = 1")
+    elif likelihood == "proposal":
+        where.append("likelihood = 10")
+    rows = db.execute(f"""SELECT rep1 as rep, publication, COUNT(*) as insertions,
+                         SUM(ad_cost) as revenue
+                         FROM sm_page_history
+                         WHERE {' AND '.join(where)}
+                         GROUP BY rep1, publication
+                         ORDER BY rep1, publication""",
+                      params).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+# ── Ad Sales Summary (replaces all-time stats) ──
+@app.route("/api/sales/summary")
+def sales_summary():
+    db = get_db()
+    c = db.cursor()
+    result = {}
+    now = datetime.now()
+    yr2 = f"{now.year % 100:02d}"
+    result["current_year"] = now.year
+
+    c.execute("SELECT COALESCE(SUM(ad_cost),0) FROM sm_page_history WHERE canceled=0 AND issue_date LIKE ?",
+              (f"%/{yr2} %",))
+    result["ytd_revenue"] = c.fetchone()[0]
+    prev_yr = f"{(now.year - 1) % 100:02d}"
+    c.execute("SELECT COALESCE(SUM(ad_cost),0) FROM sm_page_history WHERE canceled=0 AND issue_date LIKE ?",
+              (f"%/{prev_yr} %",))
+    result["prev_year_revenue"] = c.fetchone()[0]
+
+    c.execute("""SELECT publication, issue_date, COUNT(*) as cnt, SUM(ad_cost) as revenue
+                 FROM sm_page_history WHERE canceled=0 AND issue_date LIKE ?
+                 GROUP BY publication, issue_date ORDER BY issue_date, publication""",
+              (f"%/{yr2} %",))
+    upcoming = []
+    for r in c.fetchall():
+        row = dict(r)
+        row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
+        upcoming.append(row)
+    result["issues_this_year"] = upcoming
+
+    c.execute("""SELECT rep1 as rep, SUM(ad_cost) as revenue, COUNT(*) as insertions
+                 FROM sm_page_history WHERE canceled=0 AND issue_date LIKE ? AND rep1 != ''
+                 GROUP BY rep1 ORDER BY revenue DESC""",
+              (f"%/{yr2} %",))
+    result["rep_totals"] = [dict(r) for r in c.fetchall()]
+
     db.close()
     return jsonify(result)
 
@@ -562,42 +946,29 @@ def get_company_activities(company_id):
 
     hs_where = f"contact_id IN ({placeholders})"
     hs_params = list(contact_ids)
-    ca_where_contact = f"contact_id IN ({placeholders})"
-    ca_where_company = "company_id = ?"
+    type_filter = " AND type = ?" if atype else ""
 
-    if atype:
-        hs_where += " AND type = ?"
-        hs_params_count = hs_params + [atype]
-    else:
-        hs_params_count = list(hs_params)
-
-    c.execute(f"SELECT COUNT(*) FROM activities WHERE {hs_where}" + (" AND type = ?" if atype else ""),
+    c.execute(f"SELECT COUNT(*) FROM activities WHERE {hs_where}{type_filter}",
               hs_params + ([atype] if atype else []))
     total_hs = c.fetchone()[0]
 
     ca_sql = f"(contact_id IN ({placeholders}) OR company_id = ?)"
     ca_params_base = list(contact_ids) + [company_id]
-    if atype:
-        ca_sql += " AND type = ?"
-        ca_params_count = ca_params_base + [atype]
-    else:
-        ca_params_count = list(ca_params_base)
-    c.execute(f"SELECT COUNT(*) FROM custom_activities WHERE {ca_sql}", ca_params_count)
+    c.execute(f"SELECT COUNT(*) FROM custom_activities WHERE {ca_sql}{type_filter}",
+              ca_params_base + ([atype] if atype else []))
     total_ca = c.fetchone()[0]
     total = total_hs + total_ca
 
     offset = (page - 1) * per_page
-    type_filter_hs = " AND type = ?" if atype else ""
-    type_filter_ca = " AND type = ?" if atype else ""
     sql = f"""
         SELECT id, type, timestamp, subject, body, direction, status,
                owner_name, from_email, to_email, 'hubspot' as source, contact_id
-        FROM activities WHERE {hs_where}{type_filter_hs}
+        FROM activities WHERE {hs_where}{type_filter}
         UNION ALL
         SELECT id, type, created_at as timestamp, subject, body, NULL as direction,
                NULL as status, created_by as owner_name, NULL as from_email,
                NULL as to_email, 'custom' as source, contact_id
-        FROM custom_activities WHERE {ca_sql}{type_filter_ca}
+        FROM custom_activities WHERE {ca_sql}{type_filter}
         ORDER BY timestamp DESC
         LIMIT ? OFFSET ?
     """
@@ -607,7 +978,7 @@ def get_company_activities(company_id):
 
     c.execute(f"SELECT type, COUNT(*) as cnt FROM activities WHERE contact_id IN ({placeholders}) GROUP BY type", contact_ids)
     type_counts = {r["type"]: r["cnt"] for r in c.fetchall()}
-    c.execute(f"SELECT type, COUNT(*) as cnt FROM custom_activities WHERE {ca_sql.split(' AND')[0]} GROUP BY type", ca_params_base)
+    c.execute(f"SELECT type, COUNT(*) as cnt FROM custom_activities WHERE {ca_sql} GROUP BY type", ca_params_base)
     for r in c.fetchall():
         type_counts[r["type"]] = type_counts.get(r["type"], 0) + r["cnt"]
 
@@ -756,6 +1127,7 @@ def list_marketing_lists():
     for r in c.fetchall():
         item = {"id": r["id"], "name": r["name"], "description": r["description"],
                 "target": r["target"], "filters": json.loads(r["filters"]),
+                "created_by": r["created_by"] if "created_by" in r.keys() else "admin",
                 "created_at": r["created_at"], "updated_at": r["updated_at"]}
         filters_list = item["filters"]
         where, params = apply_advanced_filters(c, "contacts", filters_list)
@@ -771,9 +1143,9 @@ def list_marketing_lists():
 def create_marketing_list():
     data = request.get_json()
     db = get_db()
-    db.execute("INSERT INTO marketing_lists (name, description, target, filters) VALUES (?, ?, ?, ?)",
+    db.execute("INSERT INTO marketing_lists (name, description, target, filters, created_by) VALUES (?, ?, ?, ?, ?)",
                (data["name"], data.get("description", ""), data.get("target", "contacts"),
-                json.dumps(data["filters"])))
+                json.dumps(data["filters"]), data.get("created_by", "admin")))
     db.commit()
     lid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
     db.close()
@@ -1162,11 +1534,13 @@ def sales_account_insertions(account_id):
     sort = request.args.get("sort", "issue_date")
     order = request.args.get("order", "desc")
 
-    allowed_sorts = {"issue_date", "publication", "type_ad", "ad_size", "ad_cost", "rep1", "category", "color"}
+    allowed_sorts = {"issue_date", "publication", "type_ad", "ad_size", "ad_cost", "bill_cost", "rep1", "category", "color"}
     if sort not in allowed_sorts:
         sort = "issue_date"
     if order not in ("asc", "desc"):
         order = "desc"
+    # MM/DD/YY format sorts wrong lexicographically; reorder to YY/MM/DD for issue_date
+    sort_expr = f"substr(issue_date,7,2)||substr(issue_date,1,2)||substr(issue_date,4,2)" if sort == "issue_date" else sort
 
     where = ["account_name = ?"]
     params = [name]
@@ -1190,6 +1564,11 @@ def sales_account_insertions(account_id):
     if rep:
         where.append("rep1 = ?")
         params.append(rep)
+    likelihood = request.args.get("likelihood", "")
+    if likelihood == "confirmed":
+        where.append("likelihood = 1")
+    elif likelihood == "proposal":
+        where.append("likelihood = 10")
 
     where_sql = " AND ".join(where)
     total = c.execute(f"SELECT COUNT(*) FROM sm_page_history WHERE {where_sql}", params).fetchone()[0]
@@ -1198,10 +1577,11 @@ def sales_account_insertions(account_id):
         SELECT page_history_id, invoice_num, type_ad, issue_date, ad_size, color,
                ad_cost, net_cost, gross_cost, bill_cost, publication, rep1,
                category, headline, prod_status_id, position, placement, materials,
-               mat_on_hand, mat_expected, mat_due_date, is_open, is_frozen, canceled
+               mat_on_hand, mat_expected, mat_due_date, is_open, is_frozen, canceled,
+               likelihood
         FROM sm_page_history
         WHERE {where_sql}
-        ORDER BY {sort} {order}
+        ORDER BY {sort_expr} {order}
         LIMIT ? OFFSET ?
     """, params + [per_page, (page - 1) * per_page]).fetchall()
 
@@ -1345,7 +1725,7 @@ def sales_production():
         FROM sm_page_history ph
         LEFT JOIN sm_prod_statuses ps ON ps.id = ph.prod_status_id
         WHERE {where_sql}
-        ORDER BY ph.issue_date DESC, ph.account_name
+        ORDER BY substr(ph.issue_date,7,2)||substr(ph.issue_date,1,2)||substr(ph.issue_date,4,2) DESC, ph.account_name
         LIMIT ? OFFSET ?
     """, params + [per_page, (page - 1) * per_page]).fetchall()
 
@@ -2127,6 +2507,516 @@ def admin_duplicates():
                            "records": [dict(m) for m in matches]})
     db.close()
     return jsonify({"entity": entity, "duplicates": results})
+
+
+# ── Global Search ──
+@app.route("/api/search")
+def global_search():
+    q = request.args.get("q", "").strip()
+    if len(q) < 2:
+        return jsonify({"contacts": [], "companies": [], "accounts": []})
+    db = get_db()
+    c = db.cursor()
+    like = f"%{q}%"
+
+    contacts = c.execute("""SELECT id, firstname, lastname, email, company, jobtitle, phone
+        FROM contacts
+        WHERE firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR company LIKE ?
+        ORDER BY lastname, firstname LIMIT 15""",
+        (like, like, like, like)).fetchall()
+
+    companies = c.execute("""SELECT id, name, domain, industry, city, state
+        FROM companies
+        WHERE name LIKE ? OR domain LIKE ?
+        ORDER BY name LIMIT 15""",
+        (like, like)).fetchall()
+
+    accounts = c.execute("""SELECT id, company
+        FROM sm_companies
+        WHERE company LIKE ?
+        ORDER BY company LIMIT 15""",
+        (like,)).fetchall()
+
+    db.close()
+    return jsonify({
+        "contacts": [dict(r) for r in contacts],
+        "companies": [dict(r) for r in companies],
+        "accounts": [dict(r) for r in accounts],
+    })
+
+# ── Pipeline / Renewals ──
+@app.route("/api/pipeline")
+def pipeline():
+    db = get_db()
+    c = db.cursor()
+    now = datetime.now()
+    yr2 = f"{now.year % 100:02d}"
+    result = {}
+
+    proposals = c.execute("""
+        SELECT account_name, publication, issue_date, type_ad, ad_size, ad_cost, rep1,
+               sc.id as account_id
+        FROM sm_page_history ph
+        LEFT JOIN sm_companies sc ON ph.account_name = sc.company
+        WHERE ph.canceled = 0 AND ph.likelihood = 10 AND ph.issue_date LIKE ?
+        ORDER BY substr(ph.issue_date,7,2)||substr(ph.issue_date,1,2)||substr(ph.issue_date,4,2) ASC
+    """, (f"%/{yr2} %",)).fetchall()
+    result["proposals"] = []
+    for r in proposals:
+        row = dict(r)
+        row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
+        result["proposals"].append(row)
+
+    c.execute("""SELECT COUNT(*) as cnt, SUM(ad_cost) as revenue
+        FROM sm_page_history WHERE canceled=0 AND likelihood=10 AND issue_date LIKE ?""",
+        (f"%/{yr2} %",))
+    ps = c.fetchone()
+    result["proposal_stats"] = {"count": ps["cnt"] or 0, "revenue": ps["revenue"] or 0}
+
+    c.execute("""SELECT COUNT(*) as cnt, SUM(ad_cost) as revenue
+        FROM sm_page_history WHERE canceled=0 AND likelihood=1 AND issue_date LIKE ?""",
+        (f"%/{yr2} %",))
+    cs = c.fetchone()
+    result["confirmed_stats"] = {"count": cs["cnt"] or 0, "revenue": cs["revenue"] or 0}
+
+    c.execute("""SELECT rep1 as rep, COUNT(*) as proposals, SUM(ad_cost) as value
+        FROM sm_page_history WHERE canceled=0 AND likelihood=10 AND issue_date LIKE ? AND rep1 != ''
+        GROUP BY rep1 ORDER BY value DESC""",
+        (f"%/{yr2} %",))
+    result["proposals_by_rep"] = [dict(r) for r in c.fetchall()]
+
+    c.execute("""SELECT account_name, COUNT(*) as insertions, SUM(ad_cost) as revenue
+        FROM sm_page_history
+        WHERE canceled=0 AND likelihood=1 AND issue_date LIKE ?
+        GROUP BY account_name
+        HAVING account_name NOT IN (
+            SELECT DISTINCT account_name FROM sm_page_history
+            WHERE canceled=0 AND issue_date LIKE ? AND likelihood IN (1, 10)
+        )
+        ORDER BY revenue DESC LIMIT 25""",
+        (f"%/{int(yr2)-1:02d} %", f"%/{yr2} %"))
+    result["lapsed_accounts"] = [dict(r) for r in c.fetchall()]
+
+    upcoming_issues = c.execute("""
+        SELECT publication, issue_date,
+               SUM(CASE WHEN likelihood=1 THEN 1 ELSE 0 END) as confirmed,
+               SUM(CASE WHEN likelihood=10 THEN 1 ELSE 0 END) as proposals,
+               SUM(CASE WHEN likelihood=1 THEN ad_cost ELSE 0 END) as confirmed_rev,
+               SUM(CASE WHEN likelihood=10 THEN ad_cost ELSE 0 END) as proposal_rev
+        FROM sm_page_history
+        WHERE canceled=0 AND issue_date LIKE ?
+        GROUP BY publication, issue_date
+        ORDER BY substr(issue_date,7,2)||substr(issue_date,1,2)||substr(issue_date,4,2) ASC
+    """, (f"%/{yr2} %",)).fetchall()
+    result["issue_pipeline"] = []
+    for r in upcoming_issues:
+        row = dict(r)
+        row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
+        result["issue_pipeline"].append(row)
+
+    db.close()
+    return jsonify(result)
+
+# ── Email Ingest (BCC-to-CRM) ──
+@app.route("/api/email-log", methods=["POST"])
+def email_log():
+    db = get_db()
+    data = request.get_json()
+    from_addr = data.get("from", "")
+    to_addr = data.get("to", "")
+    subject = data.get("subject", "")
+    body = data.get("body", "")
+    direction = data.get("direction", "outbound")
+
+    contact_id = None
+    company_id = None
+    lookup_email = to_addr if direction == "outbound" else from_addr
+    if lookup_email:
+        c = db.cursor()
+        row = c.execute("SELECT id FROM contacts WHERE LOWER(email) = ?",
+                        (lookup_email.lower(),)).fetchone()
+        if row:
+            contact_id = row["id"]
+            cc = c.execute("SELECT company_id FROM contact_companies WHERE contact_id = ? LIMIT 1",
+                           (contact_id,)).fetchone()
+            if cc:
+                company_id = cc["company_id"]
+
+    db.execute("""INSERT INTO custom_activities (contact_id, company_id, type, subject, body, created_by)
+                  VALUES (?, ?, 'emails', ?, ?, ?)""",
+               (contact_id, company_id, subject,
+                f"{'To' if direction == 'outbound' else 'From'}: {lookup_email}\n\n{body}",
+                from_addr if direction == "outbound" else "Inbound"))
+    db.commit()
+    aid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.close()
+    return jsonify({"id": aid, "contact_id": contact_id, "company_id": company_id, "ok": True})
+
+
+# ═══════════════════════════════════════════════════════════
+#  PRODUCTION / BILLING / BULK ACTIONS / NOTES / AUDIT API
+# ═══════════════════════════════════════════════════════════
+
+def _audit(db, user, action, entity_type, entity_id, details=""):
+    db.execute("INSERT INTO audit_log (user, action, entity_type, entity_id, details, timestamp) VALUES (?,?,?,?,?,?)",
+               (user, action, entity_type, str(entity_id), details, datetime.now().isoformat()))
+
+
+def _init_notes_table():
+    db = get_db()
+    db.execute("""CREATE TABLE IF NOT EXISTS notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_by TEXT DEFAULT 'admin',
+        created_at TEXT DEFAULT (datetime('now'))
+    )""")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_notes_entity ON notes(entity_type, entity_id)")
+    db.execute("""CREATE TABLE IF NOT EXISTS marketing_list_members (
+        list_id INTEGER NOT NULL,
+        contact_id TEXT NOT NULL,
+        added_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (list_id, contact_id)
+    )""")
+    db.commit()
+    db.close()
+
+_init_notes_table()
+
+ISSUE_DATE_SORT_EXPR = "substr(issue_date,7,2)||substr(issue_date,1,2)||substr(issue_date,4,2)"
+
+
+# ── Production / Material Tracking Dashboard ──
+@app.route("/api/production")
+def production_dashboard():
+    db = get_db()
+    c = db.cursor()
+    now = datetime.now()
+    yr2 = f"{now.year % 100:02d}"
+    pub = request.args.get("publication", "")
+
+    where = ["canceled = 0", "likelihood = 1", "issue_date LIKE ?"]
+    params = [f"%/{yr2} %"]
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    where_sql = " AND ".join(where)
+
+    result = {}
+
+    c.execute(f"""SELECT
+                    SUM(CASE WHEN mat_on_hand = 1 THEN 1 ELSE 0 END) as have,
+                    SUM(CASE WHEN mat_on_hand = 0 OR mat_on_hand IS NULL THEN 1 ELSE 0 END) as missing,
+                    SUM(CASE WHEN mat_expected = 1 THEN 1 ELSE 0 END) as expecting,
+                    SUM(CASE WHEN mat_expected = 0 OR mat_expected IS NULL THEN 1 ELSE 0 END) as not_expecting
+                  FROM sm_page_history WHERE {where_sql}""", params)
+    r = c.fetchone()
+    result["summary"] = {
+        "materials_received": r["have"] or 0,
+        "materials_missing": r["missing"] or 0,
+        "expecting_materials": r["expecting"] or 0,
+        "not_expecting_materials": r["not_expecting"] or 0,
+    }
+
+    missing_where = where + ["(mat_on_hand = 0 OR mat_on_hand IS NULL)", "mat_expected = 1"]
+    c.execute(f"""SELECT account_name, publication, issue_date, ad_size, type_ad,
+                        mat_due_date, prod_status_id, materials, mat_track_num
+                  FROM sm_page_history
+                  WHERE {' AND '.join(missing_where)}
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+    missing_materials = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        missing_materials.append(d)
+    result["missing_materials"] = missing_materials
+
+    c.execute(f"""SELECT publication, issue_date, COUNT(*) as total,
+                        SUM(CASE WHEN mat_on_hand = 1 THEN 1 ELSE 0 END) as received,
+                        SUM(CASE WHEN (mat_on_hand = 0 OR mat_on_hand IS NULL) THEN 1 ELSE 0 END) as missing
+                  FROM sm_page_history
+                  WHERE {where_sql}
+                  GROUP BY publication, issue_date
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+    by_issue = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        total = d["total"] or 0
+        received = d["received"] or 0
+        d["materials_received"] = received
+        d["materials_missing"] = d["missing"] or 0
+        del d["missing"]
+        d["pct_complete"] = round((received / total) * 100, 1) if total else 0
+        by_issue.append(d)
+    result["by_issue"] = by_issue
+
+    db.close()
+    return jsonify(result)
+
+
+# ── Invoice / Billing Status ──
+@app.route("/api/billing")
+def billing_dashboard():
+    db = get_db()
+    c = db.cursor()
+    now = datetime.now()
+    yr2 = f"{now.year % 100:02d}"
+    pub = request.args.get("publication", "")
+
+    where = ["canceled = 0", "likelihood = 1", "issue_date LIKE ?"]
+    params = [f"%/{yr2} %"]
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    where_sql = " AND ".join(where)
+
+    result = {}
+
+    c.execute(f"""SELECT
+                    SUM(CASE WHEN bill_cost > 0 THEN 1 ELSE 0 END) as billed,
+                    SUM(CASE WHEN bill_cost IS NULL OR bill_cost <= 0 THEN 1 ELSE 0 END) as unbilled,
+                    SUM(CASE WHEN bill_cost > 0 THEN bill_cost ELSE 0 END) as billed_revenue,
+                    SUM(CASE WHEN bill_cost IS NULL OR bill_cost <= 0 THEN ad_cost ELSE 0 END) as unbilled_revenue,
+                    SUM(CASE WHEN bill_cost > 0 AND (paid_date IS NULL OR paid_date = '') THEN bill_cost ELSE 0 END) as outstanding
+                  FROM sm_page_history WHERE {where_sql}""", params)
+    r = c.fetchone()
+    billed_revenue = r["billed_revenue"] or 0
+    unbilled_revenue = r["unbilled_revenue"] or 0
+    result["summary"] = {
+        "total_billed": r["billed"] or 0,
+        "total_unbilled": r["unbilled"] or 0,
+        "total_revenue": billed_revenue if billed_revenue else unbilled_revenue,
+        "outstanding": r["outstanding"] or 0,
+    }
+
+    unbilled_where = where + ["(bill_cost = 0 OR bill_cost IS NULL)", "ad_cost > 0"]
+    c.execute(f"""SELECT account_name, publication, issue_date, type_ad, ad_size, ad_cost, rep1
+                  FROM sm_page_history
+                  WHERE {' AND '.join(unbilled_where)}
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+    unbilled = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        unbilled.append(d)
+    result["unbilled"] = unbilled
+
+    unpaid_where = where + ["bill_cost > 0", "(paid_date = '' OR paid_date IS NULL)", "invoice_num != ''"]
+    c.execute(f"""SELECT account_name, invoice_num, invoice_date, bill_cost, issue_date, publication
+                  FROM sm_page_history
+                  WHERE {' AND '.join(unpaid_where)}
+                  ORDER BY invoice_date ASC""", params)
+    unpaid = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["invoice_date_iso"] = _parse_sm_date(d["invoice_date"])
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        unpaid.append(d)
+    result["unpaid"] = unpaid
+
+    db.close()
+    return jsonify(result)
+
+
+# ── Production Calendar ──
+@app.route("/api/production/calendar")
+def production_calendar():
+    db = get_db()
+    c = db.cursor()
+    now = datetime.now()
+    yr2 = f"{now.year % 100:02d}"
+    pub = request.args.get("publication", "")
+
+    where = ["canceled = 0", "issue_date LIKE ?"]
+    params = [f"%/{yr2} %"]
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    where_sql = " AND ".join(where)
+
+    c.execute(f"""SELECT issue_date,
+                        GROUP_CONCAT(DISTINCT publication) as pubs,
+                        COUNT(*) as total_insertions,
+                        SUM(CASE WHEN likelihood = 1 THEN 1 ELSE 0 END) as confirmed,
+                        SUM(CASE WHEN likelihood = 10 THEN 1 ELSE 0 END) as proposals,
+                        SUM(CASE WHEN mat_on_hand = 1 AND likelihood = 1 THEN 1 ELSE 0 END) as materials_received,
+                        SUM(CASE WHEN (mat_on_hand = 0 OR mat_on_hand IS NULL) AND mat_expected = 1 AND likelihood = 1 THEN 1 ELSE 0 END) as materials_missing,
+                        SUM(CASE WHEN likelihood = 1 THEN ad_cost ELSE 0 END) as revenue
+                  FROM sm_page_history
+                  WHERE {where_sql}
+                  GROUP BY issue_date
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+
+    result = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        d["publications"] = sorted(set((d.pop("pubs") or "").split(",")))
+        result.append(d)
+
+    db.close()
+    return jsonify(result)
+
+
+# ── Bulk Actions on Contacts ──
+@app.route("/api/contacts/bulk", methods=["POST"])
+def contacts_bulk_action():
+    data = request.get_json() or {}
+    ids = data.get("ids", [])
+    action = data.get("action", "")
+    list_id = data.get("list_id")
+    user = data.get("user", "admin")
+
+    if not ids or not isinstance(ids, list):
+        return jsonify({"error": "ids (list) required"}), 400
+    if action not in ("add_to_list", "export", "delete"):
+        return jsonify({"error": "invalid action"}), 400
+
+    db = get_db()
+    placeholders = ",".join(["?"] * len(ids))
+    affected = 0
+
+    if action == "add_to_list":
+        if not list_id:
+            db.close()
+            return jsonify({"error": "list_id required for add_to_list"}), 400
+        row = db.execute("SELECT id FROM marketing_lists WHERE id = ?", (list_id,)).fetchone()
+        if not row:
+            db.close()
+            return jsonify({"error": "list not found"}), 404
+        for cid in ids:
+            db.execute("INSERT OR IGNORE INTO marketing_list_members (list_id, contact_id) VALUES (?, ?)",
+                       (list_id, cid))
+            affected += 1
+        _audit(db, user, "bulk_add_to_list", "contact", ",".join(str(i) for i in ids),
+               json.dumps({"list_id": list_id, "count": affected}))
+        db.commit()
+        db.close()
+        return jsonify({"ok": True, "affected": affected})
+
+    elif action == "export":
+        c = db.cursor()
+        c.execute(f"SELECT id, all_properties FROM contacts WHERE id IN ({placeholders})", ids)
+        rows = []
+        all_keys = set()
+        for r in c.fetchall():
+            props = json.loads(r["all_properties"] or "{}")
+            props["hubspot_id"] = r["id"]
+            all_keys.update(props.keys())
+            rows.append(props)
+        priority = ["hubspot_id", "firstname", "lastname", "email", "phone", "company", "jobtitle",
+                    "city", "state", "zip", "country", "owner_name", "owner_email"]
+        ordered_keys = [k for k in priority if k in all_keys]
+        ordered_keys += sorted(all_keys - set(priority))
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=ordered_keys, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+        _audit(db, user, "bulk_export", "contact", ",".join(str(i) for i in ids),
+               json.dumps({"count": len(rows)}))
+        db.commit()
+        db.close()
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=devnex_contacts_bulk_export.csv"}
+        )
+
+    elif action == "delete":
+        c = db.cursor()
+        c.execute(f"SELECT COUNT(*) FROM contacts WHERE id IN ({placeholders})", ids)
+        affected = c.fetchone()[0]
+        db.execute(f"DELETE FROM contacts WHERE id IN ({placeholders})", ids)
+        _audit(db, user, "bulk_delete", "contact", ",".join(str(i) for i in ids),
+               json.dumps({"count": affected}))
+        db.commit()
+        db.close()
+        return jsonify({"ok": True, "affected": affected})
+
+
+# ── Custom Notes ──
+@app.route("/api/notes", methods=["GET"])
+def list_notes():
+    entity_type = request.args.get("entity_type", "")
+    entity_id = request.args.get("entity_id", "")
+    if not entity_type or not entity_id:
+        return jsonify({"error": "entity_type and entity_id required"}), 400
+    db = get_db()
+    rows = db.execute("""SELECT * FROM notes WHERE entity_type = ? AND entity_id = ?
+                         ORDER BY created_at DESC""", (entity_type, entity_id)).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/notes", methods=["POST"])
+def create_note():
+    data = request.get_json() or {}
+    entity_type = data.get("entity_type", "")
+    entity_id = data.get("entity_id", "")
+    content = data.get("content", "")
+    created_by = data.get("created_by", "admin")
+    if not entity_type or not entity_id or not content:
+        return jsonify({"error": "entity_type, entity_id and content required"}), 400
+    db = get_db()
+    db.execute("""INSERT INTO notes (entity_type, entity_id, content, created_by)
+                  VALUES (?, ?, ?, ?)""",
+               (entity_type, str(entity_id), content, created_by))
+    nid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    _audit(db, created_by, "create", "note", nid, json.dumps({"entity_type": entity_type, "entity_id": entity_id}))
+    db.commit()
+    db.close()
+    return jsonify({"id": nid, "ok": True})
+
+
+@app.route("/api/notes/<int:note_id>", methods=["DELETE"])
+def delete_note(note_id):
+    user = request.args.get("user", "admin")
+    db = get_db()
+    db.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+    _audit(db, user, "delete", "note", note_id)
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+
+# ── Audit Trail ──
+@app.route("/api/audit")
+def audit_trail():
+    db = get_db()
+    entity_type = request.args.get("entity_type", "")
+    entity_id = request.args.get("entity_id", "")
+    limit = request.args.get("limit", "")
+    page = int(request.args.get("page", 1))
+    per_page = int(request.args.get("per_page", 50))
+
+    where, params = [], []
+    if entity_type:
+        where.append("entity_type = ?")
+        params.append(entity_type)
+    if entity_id:
+        where.append("entity_id = ?")
+        params.append(str(entity_id))
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+    total = db.execute(f"SELECT COUNT(*) FROM audit_log {where_sql}", params).fetchone()[0]
+
+    if limit:
+        rows = db.execute(f"SELECT * FROM audit_log {where_sql} ORDER BY timestamp DESC LIMIT ?",
+                          params + [int(limit)]).fetchall()
+        db.close()
+        return jsonify({"entries": [dict(r) for r in rows], "total": total})
+
+    rows = db.execute(f"SELECT * FROM audit_log {where_sql} ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+                      params + [per_page, (page - 1) * per_page]).fetchall()
+    db.close()
+    return jsonify({
+        "entries": [dict(r) for r in rows],
+        "total": total, "page": page, "per_page": per_page,
+        "total_pages": max(1, (total + per_page - 1) // per_page),
+    })
 
 
 if __name__ == "__main__":
