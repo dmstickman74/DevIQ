@@ -32,18 +32,18 @@ input, select { font-family: inherit; }
 .header .logo { display: flex; align-items: center; gap: 10px; }
 .header .logo img { height: 70px; filter: brightness(0) invert(1); margin-top: 20px; }
 .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.5px; }
-.header nav { display: flex; gap: 0; margin-left: 24px; height: 100%; flex: 1; }
+.header nav { display: flex; gap: 0; margin-left: 16px; height: 100%; flex: 1; min-width: 0; overflow: visible; }
 .header nav a {
-  display: flex; align-items: center; padding: 0 12px; color: rgba(255,255,255,.7);
-  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
-  border-bottom: 2px solid transparent; transition: all .15s;
+  display: flex; align-items: center; padding: 0 8px; color: rgba(255,255,255,.7);
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: all .15s; flex-shrink: 0;
 }
 .header nav a:hover { color: #fff; text-decoration: none; }
 .header nav a.active { color: #fff; border-bottom-color: var(--green); }
 .nav-dropdown { position: relative; display: flex; align-items: center; height: 100%; }
 .nav-dropdown-btn {
-  display: flex; align-items: center; gap: 4px; padding: 0 12px; color: rgba(255,255,255,.7);
-  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+  display: flex; align-items: center; gap: 4px; padding: 0 8px; color: rgba(255,255,255,.7);
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap;
   border: none; background: none; cursor: pointer; height: 100%;
   border-bottom: 2px solid transparent; transition: all .15s;
 }
@@ -61,9 +61,9 @@ input, select { font-family: inherit; }
   height: auto; border-bottom: none; text-transform: none; letter-spacing: normal;
 }
 .header nav .nav-dropdown-menu a:hover { background: var(--cream); color: var(--text); }
-.global-search { position: relative; margin-left: auto; margin-right: 8px; }
+.global-search { position: relative; margin-left: auto; margin-right: 8px; flex-shrink: 0; }
 .global-search input {
-  width: 220px; padding: 7px 12px 7px 32px; border: 1px solid rgba(255,255,255,.2);
+  width: 180px; padding: 7px 12px 7px 32px; border: 1px solid rgba(255,255,255,.2);
   border-radius: 6px; background: rgba(255,255,255,.1); color: #fff; font-size: 13px;
   transition: all .2s;
 }
@@ -760,24 +760,29 @@ tbody tr.clickable { cursor: pointer; }
   <nav>
     <a href="#" class="active" data-tab="dashboard">Dashboard</a>
     <div class="nav-dropdown" id="customersDropdown">
-      <button class="nav-dropdown-btn" onclick="toggleCustomersMenu(event)">Customers <span style="font-size:9px;">&#9660;</span></button>
+      <button class="nav-dropdown-btn" onclick="toggleDropdown('customersDropdown',event)">Customers <span style="font-size:9px;">&#9660;</span></button>
       <div class="nav-dropdown-menu">
         <a href="#" data-tab="contacts" onclick="navFromDropdown('contacts',event)">Contacts</a>
         <a href="#" data-tab="companies" onclick="navFromDropdown('companies',event)">Companies</a>
+        <a href="#" data-tab="lists" onclick="navFromDropdown('lists',event)">Lists</a>
       </div>
     </div>
-    <a href="#" data-tab="lists">Lists</a>
-    <a href="#" data-tab="sales">Ad Sales</a>
-    <a href="#" data-tab="pipeline">Pipeline</a>
-    <div class="nav-dropdown" id="opsDropdown">
-      <button class="nav-dropdown-btn" onclick="toggleOpsMenu(event)">Operations <span style="font-size:9px;">&#9660;</span></button>
+    <div class="nav-dropdown" id="salesDropdown">
+      <button class="nav-dropdown-btn" onclick="toggleDropdown('salesDropdown',event)">Sales <span style="font-size:9px;">&#9660;</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="#" data-tab="sales" onclick="navFromDropdown('sales',event)">Accounts</a>
+        <a href="#" data-tab="pipeline" onclick="navFromDropdown('pipeline',event)">Pipeline</a>
+        <a href="#" data-tab="reports" onclick="navFromDropdown('reports',event)">Reports</a>
+      </div>
+    </div>
+    <div class="nav-dropdown" id="productionDropdown">
+      <button class="nav-dropdown-btn" onclick="toggleDropdown('productionDropdown',event)">Production <span style="font-size:9px;">&#9660;</span></button>
       <div class="nav-dropdown-menu">
         <a href="#" data-tab="production" onclick="navFromDropdown('production',event)">Materials</a>
-        <a href="#" data-tab="billing" onclick="navFromDropdown('billing',event)">Billing</a>
         <a href="#" data-tab="calendar" onclick="navFromDropdown('calendar',event)">Calendar</a>
+        <a href="#" data-tab="billing" onclick="navFromDropdown('billing',event)">Billing</a>
       </div>
     </div>
-    <a href="#" data-tab="reports">Reports</a>
   </nav>
   <div class="global-search">
     <span class="search-icon">&#128269;</span>
@@ -1770,21 +1775,18 @@ document.querySelectorAll('.header nav > a[data-tab], .header-right a[data-tab]'
   });
 });
 
-function toggleCustomersMenu(e) {
+const NAV_DROPDOWNS = ['customersDropdown', 'salesDropdown', 'productionDropdown'];
+function closeAllDropdowns() { NAV_DROPDOWNS.forEach(id => document.getElementById(id).classList.remove('open')); }
+function toggleDropdown(id, e) {
   e.stopPropagation();
-  document.getElementById('opsDropdown').classList.remove('open');
-  document.getElementById('customersDropdown').classList.toggle('open');
-}
-function toggleOpsMenu(e) {
-  e.stopPropagation();
-  document.getElementById('customersDropdown').classList.remove('open');
-  document.getElementById('opsDropdown').classList.toggle('open');
+  const wasOpen = document.getElementById(id).classList.contains('open');
+  closeAllDropdowns();
+  if (!wasOpen) document.getElementById(id).classList.add('open');
 }
 function navFromDropdown(tab, e) {
   e.preventDefault();
   e.stopPropagation();
-  document.getElementById('customersDropdown').classList.remove('open');
-  document.getElementById('opsDropdown').classList.remove('open');
+  closeAllDropdowns();
   document.querySelectorAll('.header nav a, .header-right a[data-tab], .nav-dropdown-btn').forEach(t => t.classList.remove('active'));
   const parent = e.target && e.target.closest ? e.target.closest('.nav-dropdown') : null;
   if (parent) parent.querySelector('.nav-dropdown-btn').classList.add('active');
@@ -1797,8 +1799,7 @@ function toggleUserMenu(e) {
 }
 document.addEventListener('click', () => {
   document.getElementById('userDropdown').classList.remove('open');
-  document.getElementById('customersDropdown').classList.remove('open');
-  document.getElementById('opsDropdown').classList.remove('open');
+  closeAllDropdowns();
 });
 
 function showTab(tab) {
