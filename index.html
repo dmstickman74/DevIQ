@@ -366,6 +366,10 @@ th {
 th:hover { background: var(--teal-light); }
 th .sort-arrow { margin-left: 4px; opacity: .5; font-size: 10px; }
 th.sorted .sort-arrow { opacity: 1; color: var(--green); }
+th::after { content: ' \25B4\25BE'; font-size: 9px; opacity: .3; }
+th.sort-asc::after { content: ' \25B2'; opacity: 1; color: var(--green); }
+th.sort-desc::after { content: ' \25BC'; opacity: 1; color: var(--green); }
+.sales-panel th::after, .admin-panel th::after, .report-output th::after, #contactsHead th::after, #companiesHead th::after, #salesDetailView th::after { content: none; }
 td { padding: 10px 12px; border-bottom: 1px solid #f0ede8; vertical-align: top; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 tr { transition: background .1s; }
 tbody tr:hover { background: #f9f7f4; }
@@ -1128,7 +1132,7 @@ tbody tr.clickable { cursor: pointer; }
 
     <!-- Sales: Account Detail -->
     <div id="salesDetailView" style="display:none;">
-      <button class="detail-back" onclick="closeSalesDetail()">&#8592; Back to Accounts</button>
+      <button id="salesDetailBackBtn" class="detail-back" onclick="closeSalesDetail()">&#8592; Back to Accounts</button>
       <div id="salesDetailContent"></div>
     </div>
 
@@ -2904,6 +2908,42 @@ async function loadMoreActs(contactId, type, page) {
 // HELPERS
 // ══════════════════════════════════════
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function sortTable(th) {
+  const table = th.closest('table');
+  const idx = Array.from(th.parentNode.children).indexOf(th);
+  const tbody = table.querySelector('tbody');
+  if (!tbody || !tbody.rows.length) return;
+  const rows = Array.from(tbody.rows);
+  const prev = th.dataset.sortDir;
+  table.querySelectorAll('th').forEach(h => { h.classList.remove('sorted','sort-asc','sort-desc'); delete h.dataset.sortDir; });
+  const dir = prev === 'asc' ? 'desc' : 'asc';
+  th.dataset.sortDir = dir;
+  th.classList.add('sorted', 'sort-' + dir);
+  rows.sort((a, b) => {
+    let av = (a.cells[idx] || {}).textContent || '', bv = (b.cells[idx] || {}).textContent || '';
+    av = av.trim(); bv = bv.trim();
+    function parseVal(s) {
+      s = s.replace(/[$,%]/g, '');
+      if (s.endsWith('K')) return parseFloat(s) * 1000;
+      if (s.endsWith('M')) return parseFloat(s) * 1e6;
+      return parseFloat(s);
+    }
+    const an = parseVal(av), bn = parseVal(bv);
+    if (!isNaN(an) && !isNaN(bn)) return dir === 'asc' ? an - bn : bn - an;
+    if (av === '—' || av === '') return 1;
+    if (bv === '—' || bv === '') return -1;
+    return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+document.addEventListener('click', e => {
+  const th = e.target.closest('th');
+  if (!th) return;
+  if (th.closest('.sales-panel') || th.closest('.admin-panel') || th.closest('.report-output') || th.closest('#contactsHead') || th.closest('#companiesHead') || th.closest('#salesDetailView')) return;
+  if (th.querySelector('input')) return;
+  sortTable(th);
+});
 function formatDate(ts) {
   if (!ts) return '';
   const d = new Date(ts);
@@ -3018,11 +3058,13 @@ async function loadSalesAccounts() {
 
 let currentSalesAccountId = null;
 let currentSalesAccountName = '';
+let salesDetailReturnTo = 'sales';
 
 async function openSalesDetail(id) {
   const d = await (await fetch(`/api/sales/accounts/${id}`)).json();
   document.getElementById('salesView').style.display = 'none';
   document.getElementById('salesDetailView').style.display = '';
+  document.getElementById('salesDetailBackBtn').innerHTML = salesDetailReturnTo === 'dashboard' ? '&#8592; Back to Dashboard' : '&#8592; Back to Accounts';
   currentSalesAccountId = id;
   currentSalesAccountName = d.company.company;
 
@@ -3360,8 +3402,14 @@ async function loadSalesInsertions(id, page) {
 }
 
 function closeSalesDetail() {
-  document.getElementById('salesDetailView').style.display = 'none';
-  document.getElementById('salesView').style.display = '';
+  if (salesDetailReturnTo === 'dashboard') {
+    document.getElementById('salesDetailView').style.display = 'none';
+    showTab('dashboard');
+  } else {
+    document.getElementById('salesDetailView').style.display = 'none';
+    document.getElementById('salesView').style.display = '';
+  }
+  salesDetailReturnTo = 'sales';
 }
 
 let _lookups = null;
@@ -3727,7 +3775,7 @@ async function loadDashboard() {
   }).join('') : '<div style="color:var(--text3);font-size:13px;padding:12px 0;">No upcoming tasks. Click + Schedule to create one.</div>';
 
   document.getElementById('dashSales').innerHTML = (d.recent_sales || []).length ?
-    d.recent_sales.map(s => `<div class="dash-item" style="cursor:pointer;" onclick="${s.account_id ? `showTab('sales');setTimeout(()=>openSalesDetail(${s.account_id}),100)` : ''}">
+    d.recent_sales.map(s => `<div class="dash-item" style="cursor:pointer;" onclick="${s.account_id ? `salesDetailReturnTo='dashboard';showTab('sales');setTimeout(()=>openSalesDetail(${s.account_id}),100)` : ''}">
       <div class="dash-detail">
         <div class="primary">${esc(s.account_name || '—')}</div>
         <div class="secondary">${esc(s.publication || '')} &middot; ${esc(s.type_ad || '')} &middot; ${esc(s.ad_size || '')}</div>
