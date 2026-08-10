@@ -2923,6 +2923,9 @@ function sortTable(th) {
   rows.sort((a, b) => {
     let av = (a.cells[idx] || {}).textContent || '', bv = (b.cells[idx] || {}).textContent || '';
     av = av.trim(); bv = bv.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(av) || /^\d{2}\/\d{2,4}/.test(av)) {
+      return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
     function parseVal(s) {
       s = s.replace(/[$,%]/g, '');
       if (s.endsWith('K')) return parseFloat(s) * 1000;
