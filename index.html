@@ -32,9 +32,9 @@ input, select { font-family: inherit; }
 .header .logo { display: flex; align-items: center; gap: 10px; }
 .header .logo img { height: 70px; filter: brightness(0) invert(1); margin-top: 20px; }
 .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.5px; }
-.header nav { display: flex; gap: 0; margin-left: 16px; height: 100%; flex: 1; min-width: 0; overflow: visible; }
+.header nav { display: flex; gap: 0; margin-left: 16px; height: 100%; flex: 0 0 auto; overflow: visible; }
 .header nav a {
-  display: flex; align-items: center; padding: 0 8px; color: rgba(255,255,255,.7);
+  display: flex; align-items: center; padding: 0 6px; color: rgba(255,255,255,.7);
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap;
   border-bottom: 2px solid transparent; transition: all .15s; flex-shrink: 0;
 }
@@ -42,7 +42,7 @@ input, select { font-family: inherit; }
 .header nav a.active { color: #fff; border-bottom-color: var(--green); }
 .nav-dropdown { position: relative; display: flex; align-items: center; height: 100%; }
 .nav-dropdown-btn {
-  display: flex; align-items: center; gap: 4px; padding: 0 8px; color: rgba(255,255,255,.7);
+  display: flex; align-items: center; gap: 3px; padding: 0 6px; color: rgba(255,255,255,.7);
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap;
   border: none; background: none; cursor: pointer; height: 100%;
   border-bottom: 2px solid transparent; transition: all .15s;
@@ -61,9 +61,9 @@ input, select { font-family: inherit; }
   height: auto; border-bottom: none; text-transform: none; letter-spacing: normal;
 }
 .header nav .nav-dropdown-menu a:hover { background: var(--cream); color: var(--text); }
-.global-search { position: relative; margin-left: auto; margin-right: 8px; flex-shrink: 0; }
+.global-search { position: relative; margin-left: auto; margin-right: 8px; flex-shrink: 1; min-width: 0; }
 .global-search input {
-  width: 180px; padding: 7px 12px 7px 32px; border: 1px solid rgba(255,255,255,.2);
+  width: 160px; padding: 7px 12px 7px 32px; border: 1px solid rgba(255,255,255,.2);
   border-radius: 6px; background: rgba(255,255,255,.1); color: #fff; font-size: 13px;
   transition: all .2s;
 }
@@ -104,6 +104,23 @@ input, select { font-family: inherit; }
 .badge-paid { display: inline-block; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
 .badge-unpaid { display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
 .badge-unbilled { display: inline-block; background: #e5e7eb; color: #6b7280; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+.prod-issue-row { cursor: pointer; }
+.prod-issue-row:hover { background: rgba(0,58,73,.04); }
+.prod-inline-input { border: 1px solid var(--border); border-radius: 3px; padding: 3px 6px; font-size: 12px; width: 100%; box-sizing: border-box; background: #fff; }
+.prod-inline-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 2px rgba(0,58,73,.12); }
+.prod-inline-input.saving { opacity: .5; }
+.prod-check { width: 16px; height: 16px; cursor: pointer; accent-color: var(--green); }
+.prod-email-btn { background: var(--teal); color: #fff; border: none; border-radius: 3px; padding: 4px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.prod-email-btn:hover { opacity: .85; }
+.prod-issue-summary { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.prod-issue-summary .pis-stat { font-size: 13px; color: var(--text2); }
+.prod-issue-summary .pis-stat strong { color: var(--text); }
+.prod-contact-group { margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.prod-contact-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(0,58,73,.04); border-bottom: 1px solid var(--border); }
+.prod-contact-header .pcg-name { font-weight: 600; font-size: 13px; }
+.prod-contact-header .pcg-email { font-size: 12px; color: var(--text2); margin-left: 8px; }
+.prod-saved { color: var(--green); font-size: 11px; opacity: 0; transition: opacity .3s; }
+.prod-saved.show { opacity: 1; }
 /* Calendar */
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .cal-header { background: var(--teal); color: #fff; font-size: 11px; font-weight: 600; padding: 8px 4px; text-align: center; text-transform: uppercase; }
@@ -369,7 +386,7 @@ th.sorted .sort-arrow { opacity: 1; color: var(--green); }
 th::after { content: ' \25B4\25BE'; font-size: 9px; opacity: .3; }
 th.sort-asc::after { content: ' \25B2'; opacity: 1; color: var(--green); }
 th.sort-desc::after { content: ' \25BC'; opacity: 1; color: var(--green); }
-.sales-panel th::after, .admin-panel th::after, .report-output th::after, #contactsHead th::after, #companiesHead th::after, #salesDetailView th::after { content: none; }
+.sales-panel th::after, .admin-panel th::after, .report-output th::after, #contactsHead th::after, #companiesHead th::after, #salesDetailView th::after, #prodIssueDetail th::after, #billingIssueDetail th::after { content: none; }
 td { padding: 10px 12px; border-bottom: 1px solid #f0ede8; vertical-align: top; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 tr { transition: background .1s; }
 tbody tr:hover { background: #f9f7f4; }
@@ -777,6 +794,8 @@ tbody tr.clickable { cursor: pointer; }
         <a href="#" data-tab="sales" onclick="navFromDropdown('sales',event)">Accounts</a>
         <a href="#" data-tab="pipeline" onclick="navFromDropdown('pipeline',event)">Pipeline</a>
         <a href="#" data-tab="reports" onclick="navFromDropdown('reports',event)">Reports</a>
+        <a href="#" data-tab="renewals" onclick="navFromDropdown('renewals',event)">Renewals</a>
+        <a href="#" onclick="openProposalForAccount('');event.preventDefault();">New Proposal</a>
       </div>
     </div>
     <div class="nav-dropdown" id="productionDropdown">
@@ -785,6 +804,16 @@ tbody tr.clickable { cursor: pointer; }
         <a href="#" data-tab="production" onclick="navFromDropdown('production',event)">Materials</a>
         <a href="#" data-tab="calendar" onclick="navFromDropdown('calendar',event)">Calendar</a>
         <a href="#" data-tab="billing" onclick="navFromDropdown('billing',event)">Billing</a>
+      </div>
+    </div>
+    <div class="nav-dropdown" id="accountingDropdown">
+      <button class="nav-dropdown-btn" onclick="toggleDropdown('accountingDropdown',event)">Accounting <span style="font-size:9px;">&#9660;</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="#" data-tab="aging" onclick="navFromDropdown('aging',event)">AR Aging</a>
+        <a href="#" data-tab="statements" onclick="navFromDropdown('statements',event)">Statements</a>
+        <a href="#" data-tab="creditmemos" onclick="navFromDropdown('creditmemos',event)">Credit Memos</a>
+        <a href="#" data-tab="commissions" onclick="navFromDropdown('commissions',event)">Commissions</a>
+        <a href="#" data-tab="revrec" onclick="navFromDropdown('revrec',event)">Revenue Recog.</a>
       </div>
     </div>
   </nav>
@@ -849,7 +878,17 @@ tbody tr.clickable { cursor: pointer; }
 
   <!-- PIPELINE -->
   <div id="pipelineView" style="display:none;">
-    <h2 style="margin-bottom:16px;">Pipeline</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Pipeline</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="pipelineYearFilter" class="btn" style="min-width:100px;" onchange="loadPipeline()">
+          <option value="all">All Years</option>
+        </select>
+        <select id="pipelinePubFilter" class="btn" style="min-width:180px;" onchange="loadPipeline()">
+          <option value="">All Publications</option>
+        </select>
+      </div>
+    </div>
     <div class="pipeline-stats" id="pipelineStats"></div>
     <div class="pipeline-tabs" id="pipelineTabs">
       <div class="pipeline-tab active" onclick="switchPipelineTab('proposals',this)">Open Proposals</div>
@@ -862,34 +901,61 @@ tbody tr.clickable { cursor: pointer; }
 
   <!-- PRODUCTION / MATERIALS -->
   <div id="productionView" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h2>Material Tracking</h2>
-      <select id="prodPubFilter" class="btn" style="min-width:180px;" onchange="loadProduction()">
-        <option value="">All Publications</option>
-      </select>
+    <div id="prodDashboard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Material Tracking</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="prodYearFilter" class="btn" style="min-width:100px;" onchange="loadProduction()">
+            <option value="all">All Years</option>
+          </select>
+          <select id="prodPubFilter" class="btn" style="min-width:180px;" onchange="loadProduction()">
+            <option value="">All Publications</option>
+          </select>
+        </div>
+      </div>
+      <div class="prod-status-grid" id="prodStats"></div>
+      <div class="pipeline-tabs" id="prodTabs">
+        <div class="pipeline-tab active" onclick="switchProdTab('missing',this)">Missing Materials</div>
+        <div class="pipeline-tab" onclick="switchProdTab('byIssue',this)">By Issue</div>
+      </div>
+      <div id="prodContent" style="margin-top:16px;"></div>
     </div>
-    <div class="prod-status-grid" id="prodStats"></div>
-    <div class="pipeline-tabs" id="prodTabs">
-      <div class="pipeline-tab active" onclick="switchProdTab('missing',this)">Missing Materials</div>
-      <div class="pipeline-tab" onclick="switchProdTab('byIssue',this)">By Issue</div>
+    <div id="prodIssueDetail" style="display:none;">
+      <button class="detail-back" onclick="closeProdIssueDetail()">&larr; Back to Materials</button>
+      <div id="prodIssueHeader" style="margin-bottom:16px;"></div>
+      <div id="prodIssueActions" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="prodIssueContent"></div>
     </div>
-    <div id="prodContent" style="margin-top:16px;"></div>
   </div>
 
   <!-- BILLING -->
   <div id="billingView" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h2>Billing &amp; Invoicing</h2>
-      <select id="billingPubFilter" class="btn" style="min-width:180px;" onchange="loadBilling()">
-        <option value="">All Publications</option>
-      </select>
+    <div id="billingDashboard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Billing &amp; Invoicing</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="billingYearFilter" class="btn" style="min-width:100px;" onchange="loadBilling()">
+            <option value="all">All Years</option>
+          </select>
+          <select id="billingPubFilter" class="btn" style="min-width:180px;" onchange="loadBilling()">
+            <option value="">All Publications</option>
+          </select>
+        </div>
+      </div>
+      <div class="prod-status-grid" id="billingStats"></div>
+      <div class="pipeline-tabs" id="billingTabs">
+        <div class="pipeline-tab active" onclick="switchBillingTab('unbilled',this)">Unbilled</div>
+        <div class="pipeline-tab" onclick="switchBillingTab('unpaid',this)">Unpaid Invoices</div>
+        <div class="pipeline-tab" onclick="switchBillingTab('byIssue',this)">By Issue</div>
+      </div>
+      <div id="billingContent" style="margin-top:16px;"></div>
     </div>
-    <div class="prod-status-grid" id="billingStats"></div>
-    <div class="pipeline-tabs" id="billingTabs">
-      <div class="pipeline-tab active" onclick="switchBillingTab('unbilled',this)">Unbilled</div>
-      <div class="pipeline-tab" onclick="switchBillingTab('unpaid',this)">Unpaid Invoices</div>
+    <div id="billingIssueDetail" style="display:none;">
+      <button class="detail-back" onclick="closeBillingIssueDetail()">&larr; Back to Billing</button>
+      <div id="billingIssueHeader" style="margin-bottom:16px;"></div>
+      <div id="billingIssueActions" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="billingIssueContent"></div>
     </div>
-    <div id="billingContent" style="margin-top:16px;"></div>
   </div>
 
   <!-- PRODUCTION CALENDAR -->
@@ -926,16 +992,16 @@ tbody tr.clickable { cursor: pointer; }
       <select id="reportPub" class="btn" style="min-width:180px;" onchange="loadIssueDates()">
         <option value="">All Publications</option>
       </select>
-      <select id="reportYear" class="btn" style="min-width:120px;" onchange="loadIssueDates()"></select>
-      <select id="reportIssue" class="btn" style="min-width:160px;">
-        <option value="">All Issues</option>
-      </select>
+      <select id="reportYear" class="btn" style="min-width:120px;"></select>
+      <input type="date" id="reportStartDate" class="btn" style="min-width:140px;" title="Start date">
+      <span style="color:var(--text3);">to</span>
+      <input type="date" id="reportEndDate" class="btn" style="min-width:140px;" title="End date">
       <select id="reportRep" class="btn" style="min-width:120px;">
         <option value="">All Reps</option>
       </select>
       <select id="reportLikelihood" class="btn" style="min-width:140px;">
         <option value="">All Bookings</option>
-        <option value="confirmed">Confirmed</option>
+        <option value="confirmed" selected>Confirmed</option>
         <option value="proposal">Proposals</option>
       </select>
       <button class="btn btn-green" onclick="runReport()">Run Report</button>
@@ -943,6 +1009,82 @@ tbody tr.clickable { cursor: pointer; }
     </div>
     <div class="result-count" id="reportResultCount"></div>
     <div id="reportOutput" class="report-output"></div>
+  </div>
+
+  <!-- ACCOUNTING: AR AGING -->
+  <div id="agingView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Accounts Receivable Aging</h2>
+      <div>
+        <select id="agingPub" class="btn" style="min-width:180px;"><option value="">All Publications</option></select>
+        <button class="btn btn-green" onclick="loadAging()">Refresh</button>
+        <button class="btn" onclick="exportBillingCsv()">Export CSV</button>
+      </div>
+    </div>
+    <div id="agingSummary" class="dash-stats" style="margin-bottom:20px;"></div>
+    <div id="agingTable"></div>
+  </div>
+
+  <!-- ACCOUNTING: STATEMENTS -->
+  <div id="statementsView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Client Statements</h2>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <input type="text" id="stmtSearch" class="btn" placeholder="Search account..." style="min-width:300px;" oninput="searchStatementAccounts()">
+    </div>
+    <div id="stmtAccountList"></div>
+    <div id="stmtDetail" style="display:none;"></div>
+  </div>
+
+  <!-- ACCOUNTING: CREDIT MEMOS -->
+  <div id="creditmemosView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Credit Memos</h2>
+      <button class="btn btn-green" onclick="openCreditMemoModal()">+ New Credit Memo</button>
+    </div>
+    <div id="creditMemoList"></div>
+  </div>
+
+  <!-- ACCOUNTING: COMMISSIONS -->
+  <div id="commissionsView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Commission Report</h2>
+      <div>
+        <select id="commYear" class="btn" style="min-width:120px;"></select>
+        <button class="btn btn-green" onclick="loadCommissions()">Run</button>
+      </div>
+    </div>
+    <div id="commOutput"></div>
+  </div>
+
+  <!-- ACCOUNTING: REVENUE RECOGNITION -->
+  <div id="revrecView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Revenue Recognition</h2>
+      <div>
+        <select id="revrecYear" class="btn" style="min-width:120px;"></select>
+        <button class="btn btn-green" onclick="loadRevRec()">Run</button>
+      </div>
+    </div>
+    <div id="revrecOutput"></div>
+  </div>
+
+  <!-- RENEWALS VIEW -->
+  <div id="renewalsView" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Renewal Alerts</h2>
+      <div>
+        <select id="renewalDays" class="btn" style="min-width:140px;">
+          <option value="30">Next 30 Days</option>
+          <option value="60" selected>Next 60 Days</option>
+          <option value="90">Next 90 Days</option>
+          <option value="180">Next 180 Days</option>
+        </select>
+        <button class="btn btn-green" onclick="loadRenewals()">Refresh</button>
+      </div>
+    </div>
+    <div id="renewalsList"></div>
   </div>
 
   <!-- LIST VIEWS -->
@@ -1419,7 +1561,7 @@ tbody tr.clickable { cursor: pointer; }
         <div class="form-group"><label>Terms</label><input id="ctTerms" /></div>
         <div class="form-group"><label>Agency</label><input id="ctAgency" /></div>
         <div class="form-group"><label>Agency Discount (%)</label><input id="ctDiscount" type="number" step="1" min="0" max="100" /></div>
-        <div class="form-group"><label>Bill To</label><input id="ctBill" /></div>
+        <div class="form-group"><label>Bill To</label><select id="ctBill"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Credit Hold</label><select id="ctCreditHold"><option value="0">No</option><option value="1">Yes</option></select></div>
         <div class="form-group"><label>Rep 1</label><select id="ctRep1" onchange="autoFillTerritory('ctRep1','ctTerritory1')"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Territory 1</label><input id="ctTerritory1" readonly /></div>
@@ -1715,6 +1857,97 @@ tbody tr.clickable { cursor: pointer; }
   </div>
 </div>
 
+<!-- Credit Memo Modal -->
+<div class="modal-overlay" id="creditMemoModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:500px;">
+    <h3>New Credit Memo</h3>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1;"><label>Account Name *</label><input type="text" id="cmAccount"></div>
+      <div class="form-group"><label>Amount *</label><input type="number" id="cmAmount" step="0.01"></div>
+      <div class="form-group"><label>Invoice # (optional)</label><input type="text" id="cmInvoice"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Reason</label><textarea id="cmReason" rows="3"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('creditMemoModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="saveCreditMemo()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Proposal Generator Modal -->
+<div class="modal-overlay" id="proposalModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:700px;">
+    <h3>Generate Proposal / IO</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Account Name *</label><input type="text" id="propAccount"></div>
+      <div class="form-group"><label>Contact Name</label><input type="text" id="propContact"></div>
+    </div>
+    <h4 style="margin:12px 0 8px;">Line Items</h4>
+    <div id="propItems">
+      <div class="prop-item form-grid" style="grid-template-columns:1fr 1fr 1fr 1fr auto;">
+        <input type="text" placeholder="Publication" class="pi-pub">
+        <input type="text" placeholder="Ad Type" class="pi-type">
+        <input type="text" placeholder="Size" class="pi-size">
+        <input type="number" placeholder="Cost" class="pi-cost" step="0.01">
+        <button class="btn btn-sm btn-danger" onclick="this.closest('.prop-item').remove()">X</button>
+      </div>
+    </div>
+    <button class="btn btn-sm" onclick="addProposalItem()" style="margin:8px 0;">+ Add Item</button>
+    <div class="form-group" style="margin-top:8px;"><label>Notes</label><textarea id="propNotes" rows="3"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('proposalModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="generateProposal()">Generate PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Contact Modal -->
+<div class="modal-overlay" id="editContactModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:560px;">
+    <h3>Edit Contact</h3>
+    <input type="hidden" id="ecId">
+    <div class="form-grid">
+      <div class="form-group"><label>First Name</label><input type="text" id="ecFirstname"></div>
+      <div class="form-group"><label>Last Name</label><input type="text" id="ecLastname"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="ecEmail"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="ecPhone"></div>
+      <div class="form-group"><label>Company</label><input type="text" id="ecCompany"></div>
+      <div class="form-group"><label>Job Title</label><input type="text" id="ecJobtitle"></div>
+      <div class="form-group"><label>City</label><input type="text" id="ecCity"></div>
+      <div class="form-group"><label>State</label><input type="text" id="ecState"></div>
+      <div class="form-group"><label>Owner</label><input type="text" id="ecOwner"></div>
+      <div class="form-group"><label>Lifecycle Stage</label>
+        <select id="ecLifecycle"><option value="">--</option><option value="subscriber">Subscriber</option><option value="lead">Lead</option><option value="marketingqualifiedlead">MQL</option><option value="salesqualifiedlead">SQL</option><option value="opportunity">Opportunity</option><option value="customer">Customer</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('editContactModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="saveEditContact()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Company Modal -->
+<div class="modal-overlay" id="editCompanyModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:500px;">
+    <h3>Edit Company</h3>
+    <input type="hidden" id="ecoId">
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1;"><label>Company Name</label><input type="text" id="ecoName"></div>
+      <div class="form-group"><label>Domain</label><input type="text" id="ecoDomain"></div>
+      <div class="form-group"><label>Industry</label><input type="text" id="ecoIndustry"></div>
+      <div class="form-group"><label>City</label><input type="text" id="ecoCity"></div>
+      <div class="form-group"><label>State</label><input type="text" id="ecoState"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="ecoPhone"></div>
+      <div class="form-group"><label>Owner</label><input type="text" id="ecoOwner"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('editCompanyModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="saveEditCompany()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // STATE
 let state = {
@@ -1779,7 +2012,7 @@ document.querySelectorAll('.header nav > a[data-tab], .header-right a[data-tab]'
   });
 });
 
-const NAV_DROPDOWNS = ['customersDropdown', 'salesDropdown', 'productionDropdown'];
+const NAV_DROPDOWNS = ['customersDropdown', 'salesDropdown', 'productionDropdown', 'accountingDropdown'];
 function closeAllDropdowns() { NAV_DROPDOWNS.forEach(id => document.getElementById(id).classList.remove('open')); }
 function toggleDropdown(id, e) {
   e.stopPropagation();
@@ -1822,6 +2055,12 @@ function showTab(tab) {
   document.getElementById('adminView').style.display = 'none';
   document.getElementById('listView').style.display = 'none';
   document.getElementById('detailPage').classList.remove('active');
+  document.getElementById('agingView').style.display = 'none';
+  document.getElementById('statementsView').style.display = 'none';
+  document.getElementById('creditmemosView').style.display = 'none';
+  document.getElementById('commissionsView').style.display = 'none';
+  document.getElementById('revrecView').style.display = 'none';
+  document.getElementById('renewalsView').style.display = 'none';
   if (tab === 'admin') {
     document.getElementById('adminView').style.display = '';
     initAdmin();
@@ -1855,6 +2094,35 @@ function showTab(tab) {
   if (tab === 'calendar') {
     document.getElementById('calendarView').style.display = '';
     loadCalendar();
+    return;
+  }
+  if (tab === 'aging') {
+    document.getElementById('agingView').style.display = '';
+    loadAging();
+    return;
+  }
+  if (tab === 'statements') {
+    document.getElementById('statementsView').style.display = '';
+    return;
+  }
+  if (tab === 'creditmemos') {
+    document.getElementById('creditmemosView').style.display = '';
+    loadCreditMemos();
+    return;
+  }
+  if (tab === 'commissions') {
+    document.getElementById('commissionsView').style.display = '';
+    initCommissions();
+    return;
+  }
+  if (tab === 'revrec') {
+    document.getElementById('revrecView').style.display = '';
+    initRevRec();
+    return;
+  }
+  if (tab === 'renewals') {
+    document.getElementById('renewalsView').style.display = '';
+    loadRenewals();
     return;
   }
   document.getElementById('listView').style.display = '';
@@ -2659,7 +2927,7 @@ async function openContact(id) {
     <div class="detail-top">
       <div class="detail-avatar">${initials}</div>
       <div class="detail-top-info">
-        <h2>${esc(name)}</h2>
+        <h2>${esc(name)} <button class="btn btn-sm" onclick="openEditContact(${JSON.stringify(contact).replace(/"/g,'&quot;')})">Edit</button></h2>
         <p>${esc(contact.jobtitle || contact.properties?.jobtitle || '')}${contact.company ? ' at ' + esc(contact.company) : ''}</p>
         <div class="detail-top-quick">${quickItems}</div>
       </div>
@@ -2777,7 +3045,7 @@ async function openCompany(id) {
     <div class="detail-top">
       <div class="detail-avatar company-avatar">${(company.name||'?')[0].toUpperCase()}</div>
       <div class="detail-top-info">
-        <h2>${esc(company.name || 'Unknown')}</h2>
+        <h2>${esc(company.name || 'Unknown')} <button class="btn btn-sm" onclick="openEditCompany(${JSON.stringify(company).replace(/"/g,'&quot;')})">Edit</button></h2>
         <p>${[company.domain, company.industry].filter(Boolean).map(esc).join(' &middot; ')}</p>
       </div>
     </div>
@@ -2796,8 +3064,12 @@ async function openCompany(id) {
       </div>
       ${company.sm_account_id ? `
       <div class="accordion">
-        <div class="accordion-header open" onclick="toggleAcc(this)">
-          Ad Sales <span class="acc-icon">&#9660;</span>
+        <div class="accordion-header open" onclick="toggleAcc(this)" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Ad Sales</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-sm btn-green" onclick="event.stopPropagation();openContractForm(null,'${esc(company.sm_company_name||company.name).replace(/'/g,"\\'")}')" style="font-size:11px;">+ New Contract</button>
+            <span class="acc-icon">&#9660;</span>
+          </span>
         </div>
         <div class="accordion-body open">
           <div class="props-grid">
@@ -2943,7 +3215,7 @@ function sortTable(th) {
 document.addEventListener('click', e => {
   const th = e.target.closest('th');
   if (!th) return;
-  if (th.closest('.sales-panel') || th.closest('.admin-panel') || th.closest('.report-output') || th.closest('#contactsHead') || th.closest('#companiesHead') || th.closest('#salesDetailView')) return;
+  if (th.closest('.sales-panel') || th.closest('.admin-panel') || th.closest('.report-output') || th.closest('#contactsHead') || th.closest('#companiesHead') || th.closest('#salesDetailView') || th.closest('#prodIssueDetail') || th.closest('#billingIssueDetail')) return;
   if (th.querySelector('input')) return;
   sortTable(th);
 });
@@ -3481,12 +3753,50 @@ async function populateFormDropdowns() {
   fillRepSelects(['ctRep1','ctRep2','insRep1']);
 }
 
+function buildBillToOptions(acctName, agencyName, selectedVal) {
+  const sel = document.getElementById('ctBill');
+  sel.innerHTML = '';
+  const vals = [acctName];
+  if (agencyName && agencyName !== acctName) vals.push(agencyName);
+  vals.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+  const other = document.createElement('option');
+  other.value = '__other__';
+  other.textContent = 'Other...';
+  sel.appendChild(other);
+  if (selectedVal && !vals.includes(selectedVal)) {
+    const custom = document.createElement('option');
+    custom.value = selectedVal;
+    custom.textContent = selectedVal;
+    sel.insertBefore(custom, other);
+    sel.value = selectedVal;
+  } else {
+    sel.value = selectedVal || acctName;
+  }
+  sel.onchange = function() {
+    if (sel.value === '__other__') {
+      const v = prompt('Enter Bill To name:');
+      if (v && v.trim()) {
+        const custom = document.createElement('option');
+        custom.value = v.trim();
+        custom.textContent = v.trim();
+        sel.insertBefore(custom, sel.querySelector('option[value="__other__"]'));
+        sel.value = v.trim();
+      } else {
+        sel.value = acctName;
+      }
+    }
+  };
+}
+
 async function openContractForm(contractId, accountName) {
   await populateFormDropdowns();
   const m = document.getElementById('contractModal');
+  const acctName = accountName || currentSalesAccountName;
   document.getElementById('ctModalId').value = contractId || '';
-  document.getElementById('ctModalAccount').value = accountName || currentSalesAccountName;
+  document.getElementById('ctModalAccount').value = acctName;
   document.getElementById('ctDeleteBtn').style.display = contractId ? '' : 'none';
+
+  const agencyInfo = await (await fetch('/api/sales/account-agency?account=' + encodeURIComponent(acctName))).json();
 
   if (contractId) {
     document.getElementById('contractModalTitle').textContent = 'Edit Contract';
@@ -3503,7 +3813,7 @@ async function openContractForm(contractId, accountName) {
     document.getElementById('ctTerms').value = ct.terms || '';
     document.getElementById('ctAgency').value = ct.agency_name || '';
     document.getElementById('ctDiscount').value = ct.agency_discount ? (ct.agency_discount * 100).toFixed(0) : '';
-    document.getElementById('ctBill').value = ct.bill_name || '';
+    buildBillToOptions(acctName, ct.agency_name || agencyInfo.agency_name, ct.bill_name || '');
     document.getElementById('ctCreditHold').value = ct.credit_hold ? '1' : '0';
     document.getElementById('ctRep1').value = ct.rep1 || '';
     autoFillTerritory('ctRep1','ctTerritory1');
@@ -3512,9 +3822,12 @@ async function openContractForm(contractId, accountName) {
     document.getElementById('ctNotes').value = ct.notes || '';
   } else {
     document.getElementById('contractModalTitle').textContent = 'New Contract';
-    ['ctPub','ctType','ctRateCard','ctRate','ctStart','ctEnd','ctTerms','ctAgency',
-     'ctDiscount','ctBill','ctRep1','ctTerritory1','ctRep2','ctTerritory2','ctNotes']
+    ['ctPub','ctType','ctRateCard','ctRate','ctStart','ctEnd','ctTerms',
+     'ctRep1','ctTerritory1','ctRep2','ctTerritory2','ctNotes']
       .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ctAgency').value = agencyInfo.agency_name || '';
+    document.getElementById('ctDiscount').value = agencyInfo.agency_discount ? (agencyInfo.agency_discount * 100).toFixed(0) : '';
+    buildBillToOptions(acctName, agencyInfo.agency_name, '');
     document.getElementById('ctStatus').value = 'Active';
     document.getElementById('ctCreditHold').value = '0';
   }
@@ -3753,6 +4066,7 @@ async function submitActivity() {
 // ══════════════════════════════════════
 async function loadDashboard() {
   const d = await (await fetch('/api/dashboard')).json();
+  loadDashboardKpis();
   document.getElementById('dashStats').innerHTML = `
     <div class="dash-stat"><div class="val">${(d.total_contacts||0).toLocaleString()}</div><div class="lbl">Contacts</div></div>
     <div class="dash-stat"><div class="val">${(d.total_companies||0).toLocaleString()}</div><div class="lbl">Companies</div></div>
@@ -3926,21 +4240,6 @@ function initReports() {
   for (let y = curYear; y >= curYear - 10; y--) {
     yrSel.innerHTML += `<option value="${y}"${y === curYear ? ' selected' : ''}>${y}</option>`;
   }
-  loadIssueDates();
-}
-
-async function loadIssueDates() {
-  const pub = document.getElementById('reportPub').value;
-  const year = document.getElementById('reportYear').value;
-  const params = new URLSearchParams();
-  if (pub) params.set('publication', pub);
-  if (year) params.set('year', year);
-  const dates = await (await fetch('/api/reports/issue-dates?' + params)).json();
-  const sel = document.getElementById('reportIssue');
-  sel.innerHTML = '<option value="">All Issues</option>';
-  dates.forEach(d => {
-    sel.innerHTML += `<option value="${esc(d.raw)}">${d.iso || d.raw}</option>`;
-  });
 }
 
 function switchReport() {
@@ -3982,14 +4281,14 @@ function renderReportTable(rows, type) {
   const sorted = reportSort.col ? sortRows(rows, reportSort.col, reportSort.dir) : rows;
 
   if (type === 'sales-by-issue') {
-    const total = rows.reduce((s, r) => s + (r.ad_cost || 0), 0);
+    const total = rows.reduce((s, r) => s + (r.bill_cost || 0), 0);
     const th = (label, col, align) => `<th style="${align ? 'text-align:right;' : ''}cursor:pointer;" onclick="sortReportBy('${col}')">${label}${sortIndicator(col)}</th>`;
     output.innerHTML = `<table>
-      <thead><tr>${th('Publication','publication')}${th('Issue Date','issue_date_iso')}${th('Account','account_name')}${th('Agency','agency_name')}${th('Type','type_ad')}${th('Size','ad_size')}${th('Color','color')}${th('Cost','ad_cost',true)}${th('Rep','rep1')}${th('Booking','booking_status')}</tr></thead>
+      <thead><tr>${th('Publication','publication')}${th('Issue Date','issue_date_iso')}${th('Account','account_name')}${th('Agency','agency_name')}${th('Type','type_ad')}${th('Size','ad_size')}${th('Color','color')}${th('Cost','bill_cost',true)}${th('Rep','rep1')}${th('Booking','booking_status')}</tr></thead>
       <tbody>${sorted.map(r => `<tr>
         <td>${esc(r.publication||'')}</td><td>${r.issue_date_iso||''}</td><td>${esc(r.account_name||'')}</td>
         <td>${esc(r.agency_name||'')}</td><td>${esc(r.type_ad||'')}</td><td>${esc(r.ad_size||'')}</td>
-        <td>${esc(r.color||'')}</td><td style="text-align:right">${fmtMoney(r.ad_cost)}</td><td>${esc(r.rep1||'')}</td>
+        <td>${esc(r.color||'')}</td><td style="text-align:right">${fmtMoney(r.bill_cost)}</td><td>${esc(r.rep1||'')}</td>
         <td><span class="${r.booking_status==='Confirmed'?'badge-confirmed':'badge-proposal'}">${esc(r.booking_status||'')}</span></td>
       </tr>`).join('')}
       <tr class="report-total"><td colspan="7">Total</td><td style="text-align:right">${fmtMoney(total)}</td><td colspan="2"></td></tr>
@@ -4030,7 +4329,8 @@ async function runReport() {
   const type = document.getElementById('reportType').value;
   const pub = document.getElementById('reportPub').value;
   const year = document.getElementById('reportYear').value;
-  const issue = document.getElementById('reportIssue').value;
+  const startDate = document.getElementById('reportStartDate').value;
+  const endDate = document.getElementById('reportEndDate').value;
   const rep = document.getElementById('reportRep').value;
   const countEl = document.getElementById('reportResultCount');
   reportSort = { col: '', dir: 'asc' };
@@ -4041,7 +4341,8 @@ async function runReport() {
     const params = new URLSearchParams();
     if (pub) params.set('publication', pub);
     if (year) params.set('year', year);
-    if (issue) params.set('issue', issue);
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
     if (rep) params.set('rep', rep);
     if (likelihood) params.set('likelihood', likelihood);
     const rows = await (await fetch('/api/reports/sales-by-issue?' + params)).json();
@@ -4052,6 +4353,8 @@ async function runReport() {
   } else if (type === 'revenue-summary') {
     const params = new URLSearchParams({ year });
     if (pub) params.set('publication', pub);
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
     if (likelihood) params.set('likelihood', likelihood);
     const rows = await (await fetch('/api/reports/revenue-summary?' + params)).json();
     countEl.textContent = `${rows.length} issue/publication combinations`;
@@ -4061,6 +4364,8 @@ async function runReport() {
   } else if (type === 'rep-performance') {
     const params = new URLSearchParams({ year });
     if (pub) params.set('publication', pub);
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
     if (likelihood) params.set('likelihood', likelihood);
     const rows = await (await fetch('/api/reports/rep-performance?' + params)).json();
     countEl.textContent = `${rows.length} rep/publication combinations`;
@@ -4136,8 +4441,31 @@ document.addEventListener('click', e => {
 // PIPELINE
 // ══════════════════════════════════════
 let pipelineData = null;
+let pipelinePubsLoaded = false;
+let pipelineYearsLoaded = false;
+const pipelineDefaultYear = String(new Date().getFullYear() % 100).padStart(2, '0');
 async function loadPipeline() {
-  const d = await (await fetch('/api/pipeline')).json();
+  if (!pipelinePubsLoaded) {
+    const pubs = await (await fetch('/api/sales/publications')).json();
+    const sel = document.getElementById('pipelinePubFilter');
+    pubs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+    pipelinePubsLoaded = true;
+  }
+  const ySel = document.getElementById('pipelineYearFilter');
+  const pub = document.getElementById('pipelinePubFilter').value;
+  const year = pipelineYearsLoaded ? ySel.value : pipelineDefaultYear;
+  const qp = new URLSearchParams();
+  if (pub) qp.set('publication', pub);
+  if (year && year !== 'all') qp.set('year', year);
+  const qs = qp.toString() ? '?' + qp.toString() : '';
+  const d = await (await fetch('/api/pipeline' + qs)).json();
+  if (d.years) {
+    const curVal = pipelineYearsLoaded ? ySel.value : pipelineDefaultYear;
+    ySel.innerHTML = '<option value="all">All Years</option>';
+    d.years.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = '20' + y; ySel.appendChild(o); });
+    ySel.value = curVal;
+    pipelineYearsLoaded = true;
+  }
   pipelineData = d;
   document.getElementById('pipelineStats').innerHTML = `
     <div class="pipeline-stat">
@@ -4161,7 +4489,7 @@ async function loadPipeline() {
 }
 
 function switchPipelineTab(tab, el) {
-  document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#pipelineTabs .pipeline-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   renderPipelineTab(tab);
 }
@@ -4231,6 +4559,8 @@ function openEmailLogModal(contactId, companyId) {
 // ══════════════════════════════════════
 let prodData = null;
 let prodPubsLoaded = false;
+let prodYearsLoaded = false;
+const prodDefaultYear = String(new Date().getFullYear() % 100).padStart(2, '0');
 async function loadProduction() {
   if (!prodPubsLoaded) {
     const pubs = await (await fetch('/api/sales/publications')).json();
@@ -4238,9 +4568,21 @@ async function loadProduction() {
     pubs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
     prodPubsLoaded = true;
   }
+  const ySel = document.getElementById('prodYearFilter');
   const pub = document.getElementById('prodPubFilter').value;
-  const params = pub ? '?publication=' + encodeURIComponent(pub) : '';
-  const d = await (await fetch('/api/production' + params)).json();
+  const year = prodYearsLoaded ? ySel.value : prodDefaultYear;
+  const qp = new URLSearchParams();
+  if (pub) qp.set('publication', pub);
+  if (year && year !== 'all') qp.set('year', year);
+  const qs = qp.toString() ? '?' + qp.toString() : '';
+  const d = await (await fetch('/api/production' + qs)).json();
+  if (d.years) {
+    const curVal = prodYearsLoaded ? ySel.value : prodDefaultYear;
+    ySel.innerHTML = '<option value="all">All Years</option>';
+    d.years.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = '20' + y; ySel.appendChild(o); });
+    ySel.value = curVal;
+    prodYearsLoaded = true;
+  }
   prodData = d;
   const s = d.summary;
   document.getElementById('prodStats').innerHTML = `
@@ -4263,7 +4605,7 @@ function renderProdTab(tab) {
     out.innerHTML = items.length ?
       `<p style="color:var(--text2);margin-bottom:12px;">${items.length} insertions expecting materials that haven't arrived</p>
       <table><thead><tr><th>Account</th><th>Publication</th><th>Issue Date</th><th>Type</th><th>Size</th><th>Due Date</th><th>Tracking</th></tr></thead>
-      <tbody>${items.map(i => `<tr>
+      <tbody>${items.map(i => `<tr class="prod-issue-row" onclick="openProdIssue('${esc(i.publication).replace(/'/g,"\\'")}','${esc(i.issue_date).replace(/'/g,"\\'")}')">
         <td>${esc(i.account_name)}</td><td>${esc(i.publication)}</td><td>${i.issue_date_iso||''}</td>
         <td>${esc(i.type_ad||'')}</td><td>${esc(i.ad_size||'')}</td>
         <td>${i.mat_due_date||'—'}</td><td>${esc(i.mat_track_num||'—')}</td>
@@ -4274,7 +4616,7 @@ function renderProdTab(tab) {
     <tbody>${prodData.by_issue.map(r => {
       const pct = r.pct_complete;
       const color = pct >= 100 ? '#166534' : pct >= 50 ? '#92400e' : '#dc2626';
-      return `<tr>
+      return `<tr class="prod-issue-row" onclick="openProdIssue('${esc(r.publication).replace(/'/g,"\\'")}','${esc(r.issue_date).replace(/'/g,"\\'")}')">
         <td>${esc(r.publication)}</td><td>${r.issue_date_iso}</td>
         <td style="text-align:right;">${r.total}</td>
         <td style="text-align:right;">${r.materials_received}</td>
@@ -4285,11 +4627,166 @@ function renderProdTab(tab) {
   }
 }
 
+let prodIssueData = null;
+async function openProdIssue(publication, issue_date) {
+  const params = `?publication=${encodeURIComponent(publication)}&issue_date=${encodeURIComponent(issue_date)}`;
+  const d = await (await fetch('/api/production/issue' + params)).json();
+  prodIssueData = d;
+  document.getElementById('prodDashboard').style.display = 'none';
+  document.getElementById('prodIssueDetail').style.display = '';
+  renderProdIssueDetail();
+}
+function closeProdIssueDetail() {
+  document.getElementById('prodIssueDetail').style.display = 'none';
+  document.getElementById('prodDashboard').style.display = '';
+  loadProduction();
+}
+function renderProdIssueDetail() {
+  const d = prodIssueData;
+  const items = d.insertions;
+  const received = items.filter(i => i.mat_on_hand === 1).length;
+  const missing = items.filter(i => i.mat_on_hand !== 1 && i.mat_expected === 1).length;
+  const isoDate = items.length ? (items[0].issue_date_iso || d.issue_date) : d.issue_date;
+
+  document.getElementById('prodIssueHeader').innerHTML = `
+    <h2 style="margin-bottom:8px;">${esc(d.publication)} — ${isoDate}</h2>
+    <div class="prod-issue-summary">
+      <div class="pis-stat"><strong>${items.length}</strong> insertions</div>
+      <div class="pis-stat" style="color:#166534;"><strong>${received}</strong> received</div>
+      <div class="pis-stat" style="color:#dc2626;"><strong>${missing}</strong> missing</div>
+    </div>`;
+
+  const missingIds = items.filter(i => i.mat_on_hand !== 1 && i.mat_expected === 1).map(i => i.page_history_id);
+  document.getElementById('prodIssueActions').innerHTML = missingIds.length ?
+    `<button class="btn btn-sm" onclick="bulkMarkReceived([${missingIds.join(',')}])">Mark All Received (${missingIds.length})</button>` : '';
+
+  const byContact = {};
+  items.forEach(i => {
+    const key = i.materials_contact_id || 0;
+    if (!byContact[key]) byContact[key] = { name: i.contact_name || '', email: i.contact_email || '', items: [] };
+    byContact[key].items.push(i);
+  });
+  const contactKeys = Object.keys(byContact).sort((a, b) => {
+    if (a === '0') return 1;
+    if (b === '0') return -1;
+    return (byContact[a].name || '').localeCompare(byContact[b].name || '');
+  });
+
+  let html = '';
+  contactKeys.forEach(key => {
+    const group = byContact[key];
+    const hasContact = key !== '0' && group.email;
+    const adsJson = JSON.stringify(group.items.map(i => ({account: i.account_name, size: i.ad_size, type: i.type_ad})));
+    html += `<div class="prod-contact-group">
+      <div class="prod-contact-header">
+        <div>
+          <span class="pcg-name">${hasContact ? esc(group.name) : 'No Contact Assigned'}</span>
+          ${hasContact ? `<span class="pcg-email">${esc(group.email)}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${hasContact ? `<button class="prod-email-btn" onclick='emailMaterialsContact(${JSON.stringify(group.name)},${JSON.stringify(group.email)},${adsJson})'>Email Request</button>` : ''}
+        </div>
+      </div>
+      <table style="margin:0;border-radius:0;"><thead><tr>
+        <th style="width:30px;"><input type="checkbox" class="prod-check" onchange="toggleContactGroup(this,${key})"></th>
+        <th>Account</th><th>Type</th><th>Size</th>
+        <th>Received</th><th>Headline</th><th>File Name</th><th>Page #</th>
+        <th style="width:40px;"></th>
+      </tr></thead><tbody>`;
+    group.items.forEach(i => {
+      html += `<tr data-pid="${i.page_history_id}">
+        <td><input type="checkbox" class="prod-check" data-pid="${i.page_history_id}" ${i.mat_on_hand === 1 ? 'checked' : ''}
+            onchange="toggleReceived(${i.page_history_id}, this.checked)"></td>
+        <td>${esc(i.account_name)}</td>
+        <td>${esc(i.type_ad || '')}</td>
+        <td>${esc(i.ad_size || '')}</td>
+        <td>${i.mat_on_hand === 1 ? '<span class="badge-received">Received</span>' : '<span class="badge-missing">Missing</span>'}</td>
+        <td><input class="prod-inline-input" value="${esc(i.headline || '')}" data-pid="${i.page_history_id}" data-field="headline"
+            onchange="saveProdField(${i.page_history_id},'headline',this.value,this)"></td>
+        <td><input class="prod-inline-input" value="${esc(i.materials || '')}" data-pid="${i.page_history_id}" data-field="materials"
+            onchange="saveProdField(${i.page_history_id},'materials',this.value,this)"></td>
+        <td><input class="prod-inline-input" value="${esc(i.page_num || '')}" data-pid="${i.page_history_id}" data-field="page_num"
+            style="width:60px;" onchange="saveProdField(${i.page_history_id},'page_num',this.value,this)"></td>
+        <td><span class="prod-saved" id="ps-${i.page_history_id}">Saved</span></td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+  });
+  document.getElementById('prodIssueContent').innerHTML = html;
+}
+
+async function saveProdField(pid, field, value, inputEl) {
+  inputEl.classList.add('saving');
+  await fetch('/api/production/update/' + pid, {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({[field]: value})
+  });
+  inputEl.classList.remove('saving');
+  const badge = document.getElementById('ps-' + pid);
+  if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1500); }
+  const item = prodIssueData.insertions.find(i => i.page_history_id === pid);
+  if (item) item[field] = value;
+}
+
+async function toggleReceived(pid, checked) {
+  await fetch('/api/production/update/' + pid, {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mat_on_hand: checked ? 1 : 0})
+  });
+  const item = prodIssueData.insertions.find(i => i.page_history_id === pid);
+  if (item) item.mat_on_hand = checked ? 1 : 0;
+  renderProdIssueDetail();
+}
+
+async function bulkMarkReceived(ids) {
+  await fetch('/api/production/bulk-receive', {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids, value: 1})
+  });
+  ids.forEach(id => {
+    const item = prodIssueData.insertions.find(i => i.page_history_id === id);
+    if (item) item.mat_on_hand = 1;
+  });
+  renderProdIssueDetail();
+}
+
+function toggleContactGroup(headerCheckbox, contactId) {
+  const checked = headerCheckbox.checked;
+  const group = prodIssueData.insertions.filter(i => (i.materials_contact_id || 0) == contactId);
+  const toToggle = group.filter(i => (i.mat_on_hand === 1) !== checked);
+  if (!toToggle.length) return;
+  const ids = toToggle.map(i => i.page_history_id);
+  fetch('/api/production/bulk-receive', {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids, value: checked ? 1 : 0})
+  }).then(() => {
+    ids.forEach(id => {
+      const item = prodIssueData.insertions.find(i => i.page_history_id === id);
+      if (item) item.mat_on_hand = checked ? 1 : 0;
+    });
+    renderProdIssueDetail();
+  });
+}
+
+function emailMaterialsContact(name, email, adsList) {
+  const pub = prodIssueData.publication;
+  const isoDate = prodIssueData.insertions.length ? (prodIssueData.insertions[0].issue_date_iso || '') : '';
+  const subject = encodeURIComponent('Materials Needed - ' + pub + ' ' + isoDate);
+  const lines = adsList.map(a => '  - ' + a.account + ': ' + a.size + ' ' + a.type).join('\n');
+  const body = encodeURIComponent(
+    'Hi ' + name.split(' ')[0] + ',\n\nWe need the following ad materials for the ' + pub + ' ' + isoDate + ' issue:\n\n' + lines + '\n\nPlease send files at your earliest convenience.\n\nThank you'
+  );
+  window.open('mailto:' + email + '?subject=' + subject + '&body=' + body, '_blank');
+}
+
+
 // ══════════════════════════════════════
 // BILLING
 // ══════════════════════════════════════
 let billingData = null;
 let billingPubsLoaded = false;
+let billingYearsLoaded = false;
+const billingDefaultYear = String(new Date().getFullYear() % 100).padStart(2, '0');
 async function loadBilling() {
   if (!billingPubsLoaded) {
     const pubs = await (await fetch('/api/sales/publications')).json();
@@ -4297,9 +4794,21 @@ async function loadBilling() {
     pubs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
     billingPubsLoaded = true;
   }
+  const ySel = document.getElementById('billingYearFilter');
   const pub = document.getElementById('billingPubFilter').value;
-  const params = pub ? '?publication=' + encodeURIComponent(pub) : '';
-  const d = await (await fetch('/api/billing' + params)).json();
+  const year = billingYearsLoaded ? ySel.value : billingDefaultYear;
+  const qp = new URLSearchParams();
+  if (pub) qp.set('publication', pub);
+  if (year && year !== 'all') qp.set('year', year);
+  const qs = qp.toString() ? '?' + qp.toString() : '';
+  const d = await (await fetch('/api/billing' + qs)).json();
+  if (d.years) {
+    const curVal = billingYearsLoaded ? ySel.value : billingDefaultYear;
+    ySel.innerHTML = '<option value="all">All Years</option>';
+    d.years.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = '20' + y; ySel.appendChild(o); });
+    ySel.value = curVal;
+    billingYearsLoaded = true;
+  }
   billingData = d;
   const s = d.summary;
   document.getElementById('billingStats').innerHTML = `
@@ -4322,24 +4831,212 @@ function renderBillingTab(tab) {
     out.innerHTML = items.length ?
       `<p style="color:var(--text2);margin-bottom:12px;">${items.length} confirmed insertions with no bill amount</p>
       <table><thead><tr><th>Account</th><th>Publication</th><th>Issue Date</th><th>Type</th><th>Size</th><th style="text-align:right;">Rate Card</th><th>Rep</th></tr></thead>
-      <tbody>${items.map(i => `<tr>
+      <tbody>${items.map(i => `<tr class="prod-issue-row" onclick="openBillingIssue('${esc(i.publication).replace(/'/g,"\\'")}','${esc(i.issue_date).replace(/'/g,"\\'")}')">
         <td>${esc(i.account_name)}</td><td>${esc(i.publication||'')}</td><td>${i.issue_date_iso||''}</td>
         <td>${esc(i.type_ad||'')}</td><td>${esc(i.ad_size||'')}</td>
         <td style="text-align:right;">${fmtMoney(i.ad_cost)}</td><td>${esc(i.rep1||'')}</td>
       </tr>`).join('')}</tbody></table>` :
       '<p style="color:var(--text3);padding:20px;">All confirmed insertions have been billed.</p>';
-  } else {
+  } else if (tab === 'unpaid') {
     const items = billingData.unpaid;
     out.innerHTML = items.length ?
       `<p style="color:var(--text2);margin-bottom:12px;">${items.length} invoiced insertions with no payment recorded</p>
       <table><thead><tr><th>Account</th><th>Invoice #</th><th>Invoice Date</th><th>Publication</th><th>Issue Date</th><th style="text-align:right;">Amount</th></tr></thead>
-      <tbody>${items.map(i => `<tr>
+      <tbody>${items.map(i => `<tr class="prod-issue-row" onclick="openBillingIssue('${esc(i.publication).replace(/'/g,"\\'")}','${esc(i.issue_date).replace(/'/g,"\\'")}')">
         <td>${esc(i.account_name)}</td><td>${esc(i.invoice_num)}</td><td>${i.invoice_date_iso||''}</td>
         <td>${esc(i.publication||'')}</td><td>${i.issue_date_iso||''}</td>
         <td style="text-align:right;font-weight:600;">${fmtMoney(i.bill_cost)}</td>
       </tr>`).join('')}</tbody></table>` :
       '<p style="color:var(--text3);padding:20px;">All invoiced insertions have been paid.</p>';
+  } else {
+    out.innerHTML = '<p style="color:var(--text2);">Loading by-issue data...</p>';
+    loadBillingByIssue();
   }
+}
+
+async function loadBillingByIssue() {
+  const pub = document.getElementById('billingPubFilter').value;
+  const year = document.getElementById('billingYearFilter').value;
+  const qp = new URLSearchParams();
+  if (pub) qp.set('publication', pub);
+  if (year && year !== 'all') qp.set('year', year);
+  const qs = qp.toString() ? '?' + qp.toString() : '';
+  const d = await (await fetch('/api/billing' + qs)).json();
+  const out = document.getElementById('billingContent');
+  const issues = d.by_issue;
+  out.innerHTML = `<table><thead><tr><th>Publication</th><th>Issue Date</th><th style="text-align:right;">Total</th><th style="text-align:right;">Invoiced</th><th style="text-align:right;">Paid</th><th style="text-align:right;">Revenue</th></tr></thead>
+  <tbody>${issues.map(r => {
+    const paidPct = r.invoiced ? Math.round((r.paid / r.invoiced) * 100) : 0;
+    const paidColor = paidPct >= 100 ? '#166534' : paidPct > 0 ? '#92400e' : '#dc2626';
+    return '<tr class="prod-issue-row" onclick="openBillingIssue(\'' + esc(r.publication).replace(/'/g,"\\'") + "','" + esc(r.issue_date).replace(/'/g,"\\'") + '\')">' +
+      '<td>' + esc(r.publication) + '</td><td>' + r.issue_date_iso + '</td>' +
+      '<td style="text-align:right;">' + r.total + '</td>' +
+      '<td style="text-align:right;">' + r.invoiced + '/' + r.total + '</td>' +
+      '<td style="text-align:right;color:' + paidColor + ';font-weight:600;">' + r.paid + '/' + r.invoiced + '</td>' +
+      '<td style="text-align:right;">' + fmtMoney(r.revenue) + '</td></tr>';
+  }).join('')}</tbody></table>`;
+}
+
+let billingIssueData = null;
+async function openBillingIssue(publication, issue_date) {
+  const params = '?publication=' + encodeURIComponent(publication) + '&issue_date=' + encodeURIComponent(issue_date);
+  const d = await (await fetch('/api/billing/issue' + params)).json();
+  billingIssueData = d;
+  document.getElementById('billingDashboard').style.display = 'none';
+  document.getElementById('billingIssueDetail').style.display = '';
+  renderBillingIssueDetail();
+}
+function closeBillingIssueDetail() {
+  document.getElementById('billingIssueDetail').style.display = 'none';
+  document.getElementById('billingDashboard').style.display = '';
+  loadBilling();
+}
+function renderBillingIssueDetail() {
+  const d = billingIssueData;
+  const items = d.insertions;
+  const invoiced = items.filter(i => i.invoice_num && i.invoice_num.length > 3).length;
+  const paid = items.filter(i => i.paid_date && i.paid_date.length > 1).length;
+  const totalRevenue = items.reduce((s, i) => s + (i.bill_cost || 0), 0);
+  const isoDate = items.length ? (items[0].issue_date_iso || d.issue_date) : d.issue_date;
+
+  document.getElementById('billingIssueHeader').innerHTML =
+    '<h2 style="margin-bottom:8px;">' + esc(d.publication) + ' \u2014 ' + isoDate + '</h2>' +
+    '<div class="prod-issue-summary">' +
+      '<div class="pis-stat"><strong>' + items.length + '</strong> insertions</div>' +
+      '<div class="pis-stat" style="color:#166534;"><strong>' + invoiced + '</strong> invoiced</div>' +
+      '<div class="pis-stat" style="color:#dc2626;"><strong>' + (items.length - invoiced) + '</strong> uninvoiced</div>' +
+      '<div class="pis-stat"><strong>' + paid + '</strong> paid</div>' +
+      '<div class="pis-stat"><strong>' + fmtMoney(totalRevenue) + '</strong> revenue</div>' +
+    '</div>';
+
+  const uninvoicedIds = items.filter(i => !i.invoice_num || i.invoice_num.length <= 3).map(i => i.page_history_id);
+  const unpaidIds = items.filter(i => i.invoice_num && i.invoice_num.length > 3 && i.bill_cost > 0 && (!i.paid_date || i.paid_date.length <= 1)).map(i => i.page_history_id);
+  const invoicedIds = items.filter(i => i.invoice_num && i.invoice_num.length > 3).map(i => i.page_history_id);
+
+  let actionsHtml = '';
+  if (uninvoicedIds.length)
+    actionsHtml += '<button class="btn btn-sm" onclick="bulkGenerateInvoices([' + uninvoicedIds.join(',') + '])">Generate Invoices (' + uninvoicedIds.length + ')</button>';
+  if (unpaidIds.length)
+    actionsHtml += '<button class="btn btn-sm" onclick="bulkMarkPaid([' + unpaidIds.join(',') + '])">Mark All Paid (' + unpaidIds.length + ')</button>';
+  if (invoicedIds.length)
+    actionsHtml += '<button class="btn btn-sm" onclick="downloadInvoicePDFs([' + invoicedIds.join(',') + '])">Download All PDFs (' + invoicedIds.length + ')</button>';
+  document.getElementById('billingIssueActions').innerHTML = actionsHtml;
+
+  let html = '<table style="width:100%;"><thead><tr>' +
+    '<th>Account</th><th>Type</th><th>Size</th>' +
+    '<th style="text-align:right;">Rate Card</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Bill Cost</th>' +
+    '<th>Invoice #</th><th>Status</th><th style="width:80px;"></th>' +
+    '</tr></thead><tbody>';
+
+  items.forEach(i => {
+    const hasInvoice = i.invoice_num && i.invoice_num.length > 3;
+    const isPaid = i.paid_date && i.paid_date.length > 1;
+    const statusBadge = isPaid ? '<span class="badge-paid">Paid</span>'
+      : hasInvoice ? '<span class="badge-unpaid">Unpaid</span>'
+      : '<span class="badge-unbilled">No Invoice</span>';
+
+    html += '<tr data-pid="' + i.page_history_id + '">' +
+      '<td>' + esc(i.account_name) + '</td>' +
+      '<td>' + esc(i.type_ad || '') + '</td>' +
+      '<td>' + esc(i.ad_size || '') + '</td>' +
+      '<td style="text-align:right;">' + fmtMoney(i.ad_cost) + '</td>' +
+      '<td style="text-align:right;"><input class="prod-inline-input" style="width:80px;text-align:right;" value="' + (i.discount || 0) + '" ' +
+        'onchange="saveBillingField(' + i.page_history_id + ',\'discount\',parseFloat(this.value)||0,this)"></td>' +
+      '<td style="text-align:right;font-weight:600;">' + fmtMoney(i.bill_cost) + '</td>' +
+      '<td>' + (hasInvoice ? esc(i.invoice_num) : '\u2014') + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td style="display:flex;gap:4px;">';
+    if (hasInvoice)
+      html += '<button class="prod-email-btn" style="font-size:10px;padding:3px 6px;" onclick="downloadInvoicePDFs([' + i.page_history_id + '])">PDF</button>';
+    if (hasInvoice && !isPaid && i.bill_cost > 0)
+      html += '<button class="prod-email-btn" style="font-size:10px;padding:3px 6px;background:#166534;" onclick="markSinglePaid(' + i.page_history_id + ')">Paid</button>';
+    html += '</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('billingIssueContent').innerHTML = html;
+}
+
+async function saveBillingField(pid, field, value, inputEl) {
+  inputEl.classList.add('saving');
+  const data = {[field]: value};
+  if (field === 'discount') {
+    const item = billingIssueData.insertions.find(i => i.page_history_id === pid);
+    if (item) {
+      const newBill = Math.max(0, (item.ad_cost || 0) - value);
+      data.bill_cost = newBill;
+    }
+  }
+  await fetch('/api/billing/update/' + pid, {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  inputEl.classList.remove('saving');
+  const item = billingIssueData.insertions.find(i => i.page_history_id === pid);
+  if (item) {
+    item[field] = value;
+    if (data.bill_cost !== undefined) item.bill_cost = data.bill_cost;
+  }
+  renderBillingIssueDetail();
+}
+
+async function bulkGenerateInvoices(ids) {
+  const res = await fetch('/api/billing/generate-invoices', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids})
+  });
+  const d = await res.json();
+  if (d.ok) {
+    d.invoices.forEach(inv => {
+      const item = billingIssueData.insertions.find(i => i.page_history_id === inv.pid);
+      if (item) {
+        item.invoice_num = inv.invoice_num;
+        item.bill_cost = inv.bill_cost !== undefined ? inv.bill_cost : item.bill_cost;
+        item.invoice_date = new Date().toLocaleDateString('en-US');
+      }
+    });
+    renderBillingIssueDetail();
+  }
+}
+
+async function markSinglePaid(pid) {
+  const today = new Date();
+  const pd = (today.getMonth()+1).toString().padStart(2,'0') + '/' +
+             today.getDate().toString().padStart(2,'0') + '/' +
+             (today.getFullYear()%100).toString().padStart(2,'0') + ' 00:00:00';
+  await fetch('/api/billing/update/' + pid, {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({paid_date: pd})
+  });
+  const item = billingIssueData.insertions.find(i => i.page_history_id === pid);
+  if (item) item.paid_date = pd;
+  renderBillingIssueDetail();
+}
+
+async function bulkMarkPaid(ids) {
+  await fetch('/api/billing/bulk-paid', {
+    method: 'PUT', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids})
+  });
+  ids.forEach(id => {
+    const item = billingIssueData.insertions.find(i => i.page_history_id === id);
+    if (item) item.paid_date = new Date().toLocaleDateString('en-US');
+  });
+  renderBillingIssueDetail();
+}
+
+async function downloadInvoicePDFs(ids) {
+  const res = await fetch('/api/billing/invoice-pdf', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids})
+  });
+  if (!res.ok) { alert('Error generating PDFs'); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'invoices.pdf';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ══════════════════════════════════════
@@ -4566,11 +5263,22 @@ async function loadAdminLookup(key) {
     return;
   }
   const cols = cfg.cols;
-  let html = `<table><thead><tr>${cols.map(c => `<th>${formatLabel(c)}</th>`).join('')}<th style="width:60px;"></th></tr></thead><tbody>`;
+  let html = `<table><thead><tr>${cols.map(c => `<th>${formatLabel(c)}</th>`).join('')}<th>Status</th><th style="width:120px;">Actions</th></tr></thead><tbody>`;
   rows.forEach(r => {
     const pkVal = r[cfg.pk];
-    html += '<tr>' + cols.map(c => `<td>${esc(String(r[c] ?? ''))}</td>`).join('') +
-      `<td><button class="btn btn-sm btn-danger" onclick="deleteLookupRow('${key}','${esc(String(pkVal))}')">&#10005;</button></td></tr>`;
+    const isActive = r.active !== 0;
+    const rowStyle = isActive ? '' : ' style="opacity:.5;"';
+    const statusBadge = isActive
+      ? '<span class="badge-confirmed">Active</span>'
+      : '<span class="badge-proposal">Inactive</span>';
+    const toggleBtn = isActive
+      ? `<button class="btn btn-sm" style="font-size:11px;" onclick="toggleLookupActive('${key}','${esc(String(pkVal))}',0)" title="Deactivate">Deactivate</button>`
+      : `<button class="btn btn-sm btn-green" style="font-size:11px;" onclick="toggleLookupActive('${key}','${esc(String(pkVal))}',1)" title="Activate">Activate</button>`;
+    const deleteBtn = r.has_history
+      ? ''
+      : ` <button class="btn btn-sm btn-danger" style="font-size:11px;" onclick="deleteLookupRow('${key}','${esc(String(pkVal))}')" title="Delete">&#10005;</button>`;
+    html += `<tr${rowStyle}>` + cols.map(c => `<td>${esc(String(r[c] ?? ''))}</td>`).join('') +
+      `<td>${statusBadge}</td><td>${toggleBtn}${deleteBtn}</td></tr>`;
   });
   html += '</tbody></table>';
   container.innerHTML = html;
@@ -4592,9 +5300,21 @@ async function addLookupRow() {
   loadAdminLookup(key);
 }
 
+async function toggleLookupActive(key, pkVal, active) {
+  await fetch(`/api/admin/lookups/${key}/${encodeURIComponent(pkVal)}`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({active})
+  });
+  loadAdminLookup(key);
+}
+
 async function deleteLookupRow(key, pkVal) {
-  if (!confirm('Delete this row?')) return;
-  await fetch(`/api/admin/lookups/${key}/${encodeURIComponent(pkVal)}`, { method: 'DELETE' });
+  if (!confirm('Delete this row? This cannot be undone.')) return;
+  const resp = await fetch(`/api/admin/lookups/${key}/${encodeURIComponent(pkVal)}`, { method: 'DELETE' });
+  if (!resp.ok) {
+    const err = await resp.json();
+    alert(err.error || 'Delete failed.');
+    return;
+  }
   loadAdminLookup(key);
 }
 
@@ -5117,6 +5837,400 @@ async function loadAdminDbStats() {
 
 function downloadBackup() {
   window.open('/api/admin/backup', '_blank');
+}
+
+// ══════════════════════════════════════
+// CONTACT/COMPANY EDITING
+// ══════════════════════════════════════
+
+function openEditContact(contact) {
+  document.getElementById('ecId').value = contact.id;
+  document.getElementById('ecFirstname').value = contact.firstname || '';
+  document.getElementById('ecLastname').value = contact.lastname || '';
+  document.getElementById('ecEmail').value = contact.email || '';
+  document.getElementById('ecPhone').value = contact.phone || '';
+  document.getElementById('ecCompany').value = contact.company || '';
+  document.getElementById('ecJobtitle').value = contact.jobtitle || '';
+  document.getElementById('ecCity').value = contact.city || '';
+  document.getElementById('ecState').value = contact.state || '';
+  document.getElementById('ecOwner').value = contact.owner_name || '';
+  document.getElementById('ecLifecycle').value = contact.lifecyclestage || '';
+  document.getElementById('editContactModal').classList.add('open');
+}
+
+async function saveEditContact() {
+  const id = document.getElementById('ecId').value;
+  const data = {
+    firstname: document.getElementById('ecFirstname').value,
+    lastname: document.getElementById('ecLastname').value,
+    email: document.getElementById('ecEmail').value,
+    phone: document.getElementById('ecPhone').value,
+    company: document.getElementById('ecCompany').value,
+    jobtitle: document.getElementById('ecJobtitle').value,
+    city: document.getElementById('ecCity').value,
+    state: document.getElementById('ecState').value,
+    owner_name: document.getElementById('ecOwner').value,
+    lifecyclestage: document.getElementById('ecLifecycle').value,
+  };
+  await fetch(`/api/contacts/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  document.getElementById('editContactModal').classList.remove('open');
+  openContact(id);
+}
+
+function openEditCompany(company) {
+  document.getElementById('ecoId').value = company.id;
+  document.getElementById('ecoName').value = company.name || '';
+  document.getElementById('ecoDomain').value = company.domain || '';
+  document.getElementById('ecoIndustry').value = company.industry || '';
+  document.getElementById('ecoCity').value = company.city || '';
+  document.getElementById('ecoState').value = company.state || '';
+  document.getElementById('ecoPhone').value = company.phone || '';
+  document.getElementById('ecoOwner').value = company.owner_name || '';
+  document.getElementById('editCompanyModal').classList.add('open');
+}
+
+async function saveEditCompany() {
+  const id = document.getElementById('ecoId').value;
+  const data = {
+    name: document.getElementById('ecoName').value,
+    domain: document.getElementById('ecoDomain').value,
+    industry: document.getElementById('ecoIndustry').value,
+    city: document.getElementById('ecoCity').value,
+    state: document.getElementById('ecoState').value,
+    phone: document.getElementById('ecoPhone').value,
+    owner_name: document.getElementById('ecoOwner').value,
+  };
+  await fetch(`/api/companies/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  document.getElementById('editCompanyModal').classList.remove('open');
+  openCompanyDetail(id);
+}
+
+// ══════════════════════════════════════
+// AR AGING
+// ══════════════════════════════════════
+
+async function loadAging() {
+  const pub = document.getElementById('agingPub').value;
+  const params = new URLSearchParams();
+  if (pub) params.set('publication', pub);
+  const data = await (await fetch('/api/reports/ar-aging?' + params)).json();
+  // Populate publication dropdown if needed
+  if (document.getElementById('agingPub').options.length <= 1) {
+    const pubs = await (await fetch('/api/sales/publications')).json();
+    const sel = document.getElementById('agingPub');
+    pubs.forEach(p => { sel.innerHTML += `<option value="${esc(p.publication)}">${esc(p.publication)}</option>`; });
+  }
+  const t = data.totals;
+  document.getElementById('agingSummary').innerHTML = `
+    <div class="dash-stat"><div class="val">${fmtMoney(t.current)}</div><div class="lbl">Current</div></div>
+    <div class="dash-stat"><div class="val" style="color:#e6a817;">${fmtMoney(t.days_30)}</div><div class="lbl">1-30 Days</div></div>
+    <div class="dash-stat"><div class="val" style="color:#e67e22;">${fmtMoney(t.days_60)}</div><div class="lbl">31-60 Days</div></div>
+    <div class="dash-stat"><div class="val" style="color:#e74c3c;">${fmtMoney(t.days_90)}</div><div class="lbl">61-90 Days</div></div>
+    <div class="dash-stat"><div class="val" style="color:#c0392b;">${fmtMoney(t.over_90)}</div><div class="lbl">Over 90 Days</div></div>
+    <div class="dash-stat"><div class="val">${fmtMoney(data.grand_total)}</div><div class="lbl">Total Outstanding</div></div>
+  `;
+  const accounts = data.by_account || [];
+  document.getElementById('agingTable').innerHTML = accounts.length ? `<table>
+    <thead><tr><th>Account</th><th style="text-align:right">Current</th><th style="text-align:right">1-30</th><th style="text-align:right">31-60</th><th style="text-align:right">61-90</th><th style="text-align:right">Over 90</th><th style="text-align:right">Total</th><th>Statement</th></tr></thead>
+    <tbody>${accounts.map(a => `<tr>
+      <td>${esc(a.account_name)}</td>
+      <td style="text-align:right">${a.current ? fmtMoney(a.current) : '-'}</td>
+      <td style="text-align:right;color:#e6a817;">${a.days_30 ? fmtMoney(a.days_30) : '-'}</td>
+      <td style="text-align:right;color:#e67e22;">${a.days_60 ? fmtMoney(a.days_60) : '-'}</td>
+      <td style="text-align:right;color:#e74c3c;">${a.days_90 ? fmtMoney(a.days_90) : '-'}</td>
+      <td style="text-align:right;color:#c0392b;">${a.over_90 ? fmtMoney(a.over_90) : '-'}</td>
+      <td style="text-align:right;font-weight:600;">${fmtMoney(a.total)}</td>
+      <td><button class="btn btn-sm" onclick="viewStatement('${esc(a.account_name)}')">View</button>
+          <button class="btn btn-sm" onclick="downloadStatementPdf('${esc(a.account_name)}')">PDF</button></td>
+    </tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);">No outstanding invoices found.</p>';
+}
+
+function exportBillingCsv() {
+  const year = document.getElementById('reportYear')?.value || new Date().getFullYear();
+  window.open('/api/billing/export-csv?year=' + year, '_blank');
+}
+
+// ══════════════════════════════════════
+// STATEMENTS
+// ══════════════════════════════════════
+
+let stmtSearchTimeout;
+function searchStatementAccounts() {
+  clearTimeout(stmtSearchTimeout);
+  stmtSearchTimeout = setTimeout(async () => {
+    const q = document.getElementById('stmtSearch').value.trim();
+    if (q.length < 2) { document.getElementById('stmtAccountList').innerHTML = ''; return; }
+    const data = await (await fetch('/api/sales/accounts?q=' + encodeURIComponent(q) + '&per_page=20')).json();
+    const accounts = data.accounts || [];
+    document.getElementById('stmtAccountList').innerHTML = accounts.map(a =>
+      `<div class="dash-item" style="cursor:pointer;" onclick="viewStatement('${esc(a.company)}')">
+        <div class="dash-detail"><div class="primary">${esc(a.company)}</div></div>
+        <div class="dash-meta">${fmtMoney(a.total_revenue || 0)}</div>
+      </div>`
+    ).join('') || '<p style="color:var(--text3);">No accounts found.</p>';
+  }, 300);
+}
+
+async function viewStatement(accountName) {
+  document.getElementById('stmtAccountList').innerHTML = '';
+  document.getElementById('stmtSearch').value = '';
+  const data = await (await fetch('/api/reports/statement/' + encodeURIComponent(accountName))).json();
+  document.getElementById('stmtDetail').style.display = '';
+  document.getElementById('stmtDetail').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3>${esc(data.account_name)}</h3>
+      <div>
+        <button class="btn btn-sm" onclick="downloadStatementPdf('${esc(data.account_name)}')">Download PDF</button>
+        <button class="btn btn-sm" onclick="document.getElementById('stmtDetail').style.display='none'">Close</button>
+      </div>
+    </div>
+    <div class="dash-stats" style="margin-bottom:16px;">
+      <div class="dash-stat"><div class="val">${fmtMoney(data.total_billed)}</div><div class="lbl">Total Billed</div></div>
+      <div class="dash-stat"><div class="val" style="color:var(--green);">${fmtMoney(data.total_paid)}</div><div class="lbl">Total Paid</div></div>
+      <div class="dash-stat"><div class="val" style="color:#e74c3c;">${fmtMoney(data.total_outstanding)}</div><div class="lbl">Outstanding</div></div>
+    </div>
+    <table><thead><tr><th>Invoice #</th><th>Invoice Date</th><th>Publication</th><th>Type</th><th>Issue Date</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+    <tbody>${data.items.map(i => `<tr>
+      <td>${esc(i.invoice_num||'')}</td><td>${i.invoice_date_iso||''}</td><td>${esc(i.publication||'')}</td>
+      <td>${esc(i.type_ad||'')}</td><td>${i.issue_date_iso||''}</td>
+      <td style="text-align:right">${fmtMoney(i.bill_cost)}</td>
+      <td><span class="${i.status==='Paid'?'badge-confirmed':'badge-proposal'}">${i.status}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function downloadStatementPdf(accountName) {
+  window.open('/api/reports/statement/' + encodeURIComponent(accountName) + '/pdf', '_blank');
+}
+
+// ══════════════════════════════════════
+// CREDIT MEMOS
+// ══════════════════════════════════════
+
+function openCreditMemoModal() {
+  document.getElementById('cmAccount').value = '';
+  document.getElementById('cmAmount').value = '';
+  document.getElementById('cmInvoice').value = '';
+  document.getElementById('cmReason').value = '';
+  document.getElementById('creditMemoModal').classList.add('open');
+}
+
+async function saveCreditMemo() {
+  const data = {
+    account_name: document.getElementById('cmAccount').value,
+    amount: parseFloat(document.getElementById('cmAmount').value) || 0,
+    invoice_num: document.getElementById('cmInvoice').value,
+    reason: document.getElementById('cmReason').value,
+  };
+  if (!data.account_name || !data.amount) { alert('Account and amount are required.'); return; }
+  await fetch('/api/billing/credit-memos', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  document.getElementById('creditMemoModal').classList.remove('open');
+  loadCreditMemos();
+}
+
+async function loadCreditMemos() {
+  const memos = await (await fetch('/api/billing/credit-memos')).json();
+  document.getElementById('creditMemoList').innerHTML = memos.length ? `<table>
+    <thead><tr><th>Account</th><th style="text-align:right">Amount</th><th>Invoice #</th><th>Reason</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+    <tbody>${memos.map(m => `<tr>
+      <td>${esc(m.account_name)}</td>
+      <td style="text-align:right">${fmtMoney(m.amount)}</td>
+      <td>${esc(m.invoice_num||'')}</td>
+      <td>${esc(m.reason||'')}</td>
+      <td><span class="${m.status==='applied'?'badge-confirmed':'badge-proposal'}">${m.status}</span></td>
+      <td>${m.created_at ? new Date(m.created_at).toLocaleDateString() : ''}</td>
+      <td>${m.status !== 'applied' ? `<button class="btn btn-sm btn-green" onclick="applyCreditMemo(${m.id})">Apply</button>` : ''}</td>
+    </tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);">No credit memos.</p>';
+}
+
+async function applyCreditMemo(id) {
+  await fetch('/api/billing/credit-memos/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status:'applied'}) });
+  loadCreditMemos();
+}
+
+// ══════════════════════════════════════
+// COMMISSIONS
+// ══════════════════════════════════════
+
+let commInited = false;
+function initCommissions() {
+  if (commInited) return;
+  commInited = true;
+  const sel = document.getElementById('commYear');
+  const cur = new Date().getFullYear();
+  for (let y = cur; y >= cur - 10; y--) sel.innerHTML += `<option value="${y}"${y===cur?' selected':''}>${y}</option>`;
+  loadCommissions();
+}
+
+async function loadCommissions() {
+  const year = document.getElementById('commYear').value;
+  const data = await (await fetch('/api/reports/commissions?year=' + year)).json();
+  const reps = data.reps || [];
+  const totalRev = reps.reduce((s, r) => s + r.total_revenue, 0);
+  const totalComm = reps.reduce((s, r) => s + r.total_commission, 0);
+  document.getElementById('commOutput').innerHTML = reps.length ? `
+    <div class="dash-stats" style="margin-bottom:16px;">
+      <div class="dash-stat"><div class="val">${fmtMoney(totalRev)}</div><div class="lbl">Total Revenue</div></div>
+      <div class="dash-stat"><div class="val">${fmtMoney(totalComm)}</div><div class="lbl">Total Commissions</div></div>
+    </div>
+    <table><thead><tr><th>Rep</th><th style="text-align:right">Insertions</th><th style="text-align:right">Revenue</th><th style="text-align:right">Rate</th><th style="text-align:right">Commission</th></tr></thead>
+    <tbody>${reps.map(r => `<tr>
+      <td>${esc(r.rep)}</td>
+      <td style="text-align:right">${r.insertion_count}</td>
+      <td style="text-align:right">${fmtMoney(r.total_revenue)}</td>
+      <td style="text-align:right">${r.commission_rate}%</td>
+      <td style="text-align:right">${fmtMoney(r.total_commission)}</td>
+    </tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);">No commission data for this year.</p>';
+}
+
+// ══════════════════════════════════════
+// REVENUE RECOGNITION
+// ══════════════════════════════════════
+
+let revrecInited = false;
+function initRevRec() {
+  if (revrecInited) return;
+  revrecInited = true;
+  const sel = document.getElementById('revrecYear');
+  const cur = new Date().getFullYear();
+  for (let y = cur; y >= cur - 10; y--) sel.innerHTML += `<option value="${y}"${y===cur?' selected':''}>${y}</option>`;
+  loadRevRec();
+}
+
+async function loadRevRec() {
+  const year = document.getElementById('revrecYear').value;
+  const rows = await (await fetch('/api/reports/revenue-recognition?year=' + year)).json();
+  const totalConf = rows.reduce((s, r) => s + (r.confirmed_revenue || 0), 0);
+  const totalProp = rows.reduce((s, r) => s + (r.proposed_revenue || 0), 0);
+  const totalColl = rows.reduce((s, r) => s + (r.collected || 0), 0);
+  const totalOut = rows.reduce((s, r) => s + (r.outstanding || 0), 0);
+  document.getElementById('revrecOutput').innerHTML = rows.length ? `
+    <div class="dash-stats" style="margin-bottom:16px;">
+      <div class="dash-stat"><div class="val">${fmtMoney(totalConf)}</div><div class="lbl">Confirmed</div></div>
+      <div class="dash-stat"><div class="val" style="color:#e6a817;">${fmtMoney(totalProp)}</div><div class="lbl">Proposed</div></div>
+      <div class="dash-stat"><div class="val" style="color:var(--green);">${fmtMoney(totalColl)}</div><div class="lbl">Collected</div></div>
+      <div class="dash-stat"><div class="val" style="color:#e74c3c;">${fmtMoney(totalOut)}</div><div class="lbl">Outstanding</div></div>
+    </div>
+    <table><thead><tr><th>Publication</th><th>Issue Date</th><th style="text-align:right">Insertions</th><th style="text-align:right">Confirmed</th><th style="text-align:right">Proposed</th><th style="text-align:right">Collected</th><th style="text-align:right">Outstanding</th></tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td>${esc(r.publication||'')}</td><td>${r.issue_date_iso||''}</td>
+      <td style="text-align:right">${r.insertion_count}</td>
+      <td style="text-align:right">${fmtMoney(r.confirmed_revenue)}</td>
+      <td style="text-align:right;color:#e6a817;">${fmtMoney(r.proposed_revenue)}</td>
+      <td style="text-align:right;color:var(--green);">${fmtMoney(r.collected)}</td>
+      <td style="text-align:right;color:#e74c3c;">${fmtMoney(r.outstanding)}</td>
+    </tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);">No data for this year.</p>';
+}
+
+// ══════════════════════════════════════
+// RENEWAL ALERTS
+// ══════════════════════════════════════
+
+async function loadRenewals() {
+  const days = document.getElementById('renewalDays').value;
+  const data = await (await fetch('/api/sales/renewals?days=' + days)).json();
+  document.getElementById('renewalsList').innerHTML = data.length ? `
+    <div style="margin-bottom:12px;color:var(--text2);">${data.length} contract${data.length!==1?'s':''} expiring within ${days} days</div>
+    <table><thead><tr><th>Account</th><th>Publication</th><th>Rep</th><th>End Date</th><th style="text-align:right">Days Left</th><th>Status</th><th style="text-align:right">Revenue</th><th>Actions</th></tr></thead>
+    <tbody>${data.map(r => {
+      const badge = r.urgency === 'expired' ? 'badge-proposal' : r.urgency === 'urgent' ? 'badge-proposal' : 'badge-confirmed';
+      const label = r.urgency === 'expired' ? 'Expired' : r.urgency === 'urgent' ? 'Urgent' : 'Upcoming';
+      return `<tr>
+        <td>${esc(r.account_name)}</td><td>${esc(r.publication||'')}</td><td>${esc(r.rep1||'')}</td>
+        <td>${r.contract_end_iso||''}</td>
+        <td style="text-align:right;font-weight:600;color:${r.urgency==='expired'?'#e74c3c':r.urgency==='urgent'?'#e67e22':'inherit'}">${r.days_remaining ?? ''}</td>
+        <td><span class="${badge}">${label}</span></td>
+        <td style="text-align:right">${fmtMoney(r.total_revenue)}</td>
+        <td><button class="btn btn-sm btn-green" onclick="openContractForm(null,'${esc(r.account_name)}')">Renew</button>
+            <button class="btn btn-sm" onclick="openProposalForAccount('${esc(r.account_name)}')">Proposal</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>` : '<p style="color:var(--text3);">No contracts expiring within this timeframe.</p>';
+}
+
+// ══════════════════════════════════════
+// PROPOSAL GENERATOR
+// ══════════════════════════════════════
+
+function openProposalForAccount(accountName) {
+  document.getElementById('propAccount').value = accountName || '';
+  document.getElementById('propContact').value = '';
+  document.getElementById('propNotes').value = '';
+  document.getElementById('propItems').innerHTML = `
+    <div class="prop-item form-grid" style="grid-template-columns:1fr 1fr 1fr 1fr auto;">
+      <input type="text" placeholder="Publication" class="pi-pub">
+      <input type="text" placeholder="Ad Type" class="pi-type">
+      <input type="text" placeholder="Size" class="pi-size">
+      <input type="number" placeholder="Cost" class="pi-cost" step="0.01">
+      <button class="btn btn-sm btn-danger" onclick="this.closest('.prop-item').remove()">X</button>
+    </div>`;
+  document.getElementById('proposalModal').classList.add('open');
+}
+
+function addProposalItem() {
+  const div = document.createElement('div');
+  div.className = 'prop-item form-grid';
+  div.style.gridTemplateColumns = '1fr 1fr 1fr 1fr auto';
+  div.innerHTML = `
+    <input type="text" placeholder="Publication" class="pi-pub">
+    <input type="text" placeholder="Ad Type" class="pi-type">
+    <input type="text" placeholder="Size" class="pi-size">
+    <input type="number" placeholder="Cost" class="pi-cost" step="0.01">
+    <button class="btn btn-sm btn-danger" onclick="this.closest('.prop-item').remove()">X</button>`;
+  document.getElementById('propItems').appendChild(div);
+}
+
+async function generateProposal() {
+  const items = [];
+  document.querySelectorAll('.prop-item').forEach(row => {
+    const pub = row.querySelector('.pi-pub').value;
+    const type = row.querySelector('.pi-type').value;
+    const size = row.querySelector('.pi-size').value;
+    const cost = parseFloat(row.querySelector('.pi-cost').value) || 0;
+    if (pub || type) items.push({ publication: pub, ad_type: type, size, cost });
+  });
+  const payload = {
+    account_name: document.getElementById('propAccount').value,
+    contact_name: document.getElementById('propContact').value,
+    items,
+    notes: document.getElementById('propNotes').value,
+  };
+  const resp = await fetch('/api/sales/proposal-pdf', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `proposal_${payload.account_name.replace(/\s+/g,'_')}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('proposalModal').classList.remove('open');
+}
+
+// ══════════════════════════════════════
+// DASHBOARD KPIs
+// ══════════════════════════════════════
+
+async function loadDashboardKpis() {
+  const data = await (await fetch('/api/dashboard/kpis')).json();
+  const kpiHtml = `
+    <div class="dash-stat"><div class="val">${fmtMoney(data.ytd_revenue)}</div><div class="lbl">${data.current_year} Revenue</div></div>
+    <div class="dash-stat"><div class="val" style="color:${data.yoy_change >= 0 ? 'var(--green)' : '#e74c3c'};">${data.yoy_change >= 0 ? '+' : ''}${data.yoy_change.toFixed(1)}%</div><div class="lbl">vs ${data.current_year - 1}</div></div>
+    <div class="dash-stat"><div class="val">${fmtMoney(data.pipeline_value)}</div><div class="lbl">Pipeline</div></div>
+    <div class="dash-stat"><div class="val" style="color:#e74c3c;">${fmtMoney(data.outstanding_ar)}</div><div class="lbl">Outstanding AR</div></div>
+    <div class="dash-stat"><div class="val">${data.collection_rate.toFixed(0)}%</div><div class="lbl">Collection Rate</div></div>
+    <div class="dash-stat"><div class="val">${data.active_accounts}</div><div class="lbl">Active Accounts</div></div>
+  `;
+  // Insert KPI row before the existing dash-grid
+  let kpiRow = document.getElementById('dashKpis');
+  if (!kpiRow) {
+    kpiRow = document.createElement('div');
+    kpiRow.id = 'dashKpis';
+    kpiRow.className = 'dash-stats';
+    kpiRow.style.marginBottom = '20px';
+    const dashGrid = document.querySelector('.dash-grid');
+    dashGrid.parentNode.insertBefore(kpiRow, dashGrid);
+  }
+  kpiRow.innerHTML = kpiHtml;
 }
 
 init();

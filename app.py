@@ -108,6 +108,17 @@ def init_db():
         existing = {row[1] for row in c.fetchall()}
         if col not in existing:
             db.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_def}")
+    db.execute("""CREATE TABLE IF NOT EXISTS credit_memos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        reason TEXT DEFAULT '',
+        invoice_num TEXT DEFAULT '',
+        status TEXT DEFAULT 'pending',
+        created_by TEXT DEFAULT 'admin',
+        created_at TEXT DEFAULT (datetime('now')),
+        applied_at TEXT
+    )""")
     c = db.cursor()
     c.execute("SELECT COUNT(*) FROM admin_users")
     if c.fetchone()[0] == 0:
@@ -386,13 +397,55 @@ def create_company():
     db.close()
     return jsonify({"id": cid})
 
+@app.route("/api/contacts/<cid>", methods=["PUT"])
+def update_contact(cid):
+    data = request.get_json()
+    db = get_db()
+    sets, vals = [], []
+    for k in ("firstname","lastname","email","phone","company","jobtitle",
+              "city","state","country","owner_name","lifecyclestage","hs_lead_status"):
+        if k in data:
+            sets.append(f"{k} = ?")
+            vals.append(data[k])
+    if not sets:
+        db.close()
+        return jsonify({"error": "No fields to update"}), 400
+    sets.append("lastmodifieddate = ?")
+    vals.append(datetime.now().isoformat())
+    vals.append(cid)
+    db.execute(f"UPDATE contacts SET {', '.join(sets)} WHERE id = ?", vals)
+    db.commit()
+    log_audit(db, "update", "contact", cid, json.dumps(data), "admin")
+    db.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/companies/<cid>", methods=["PUT"])
+def update_company(cid):
+    data = request.get_json()
+    db = get_db()
+    sets, vals = [], []
+    for k in ("name","domain","industry","city","state","country","phone","owner_name"):
+        if k in data:
+            sets.append(f"{k} = ?")
+            vals.append(data[k])
+    if not sets:
+        db.close()
+        return jsonify({"error": "No fields to update"}), 400
+    vals.append(cid)
+    db.execute(f"UPDATE companies SET {', '.join(sets)} WHERE id = ?", vals)
+    db.commit()
+    log_audit(db, "update", "company", cid, json.dumps(data), "admin")
+    db.close()
+    return jsonify({"ok": True})
+
 # ── Sales by Issue Report ──
 @app.route("/api/reports/sales-by-issue")
 def report_sales_by_issue():
     db = get_db()
     pub = request.args.get("publication", "")
     year = request.args.get("year", "")
-    issue = request.args.get("issue", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
     rep = request.args.get("rep", "")
     ad_type = request.args.get("ad_type", "")
     where, params = ["canceled = 0"], []
@@ -402,9 +455,14 @@ def report_sales_by_issue():
     if year:
         where.append("issue_date LIKE ?")
         params.append(f"%/{year[2:]} %")
-    if issue:
-        where.append("issue_date = ?")
-        params.append(issue)
+    if start_date:
+        where.append(ISSUE_DATE_SORT_EXPR + " >= ?")
+        sd = start_date.replace("-", "")
+        params.append(sd[2:6] + sd[6:8])
+    if end_date:
+        where.append(ISSUE_DATE_SORT_EXPR + " <= ?")
+        ed = end_date.replace("-", "")
+        params.append(ed[2:6] + ed[6:8])
     if rep:
         where.append("rep1 = ?")
         params.append(rep)
@@ -417,7 +475,7 @@ def report_sales_by_issue():
     elif likelihood == "proposal":
         where.append("likelihood = 10")
     sort = request.args.get("sort", "publication,issue_date,account_name")
-    allowed_sorts = {"publication","issue_date","account_name","agency_name","type_ad","ad_size","color","ad_cost","net_cost","rep1"}
+    allowed_sorts = {"publication","issue_date","account_name","agency_name","type_ad","ad_size","color","bill_cost","net_cost","rep1"}
     sort_parts = []
     for s in sort.split(","):
         s = s.strip()
@@ -429,7 +487,7 @@ def report_sales_by_issue():
             sort_parts.append(f"{s} {'DESC' if desc else 'ASC'}")
     order_by = ", ".join(sort_parts) if sort_parts else "publication, issue_date, account_name"
     rows = db.execute(f"""SELECT publication, issue_date, account_name, agency_name,
-                          type_ad, ad_size, color, ad_cost, net_cost, rep1,
+                          type_ad, ad_size, color, bill_cost, net_cost, rep1,
                           contract_num, order_num
                           , likelihood
                           FROM sm_page_history
@@ -474,17 +532,27 @@ def report_revenue_summary():
         year = year[2:]
     pub = request.args.get("publication", "")
     likelihood = request.args.get("likelihood", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
     where = ["canceled = 0", "issue_date LIKE ?"]
     params = [f"%/{year} %"]
     if pub:
         where.append("publication = ?")
         params.append(pub)
+    if start_date:
+        where.append(ISSUE_DATE_SORT_EXPR + " >= ?")
+        sd = start_date.replace("-", "")
+        params.append(sd[2:6] + sd[6:8])
+    if end_date:
+        where.append(ISSUE_DATE_SORT_EXPR + " <= ?")
+        ed = end_date.replace("-", "")
+        params.append(ed[2:6] + ed[6:8])
     if likelihood == "confirmed":
         where.append("likelihood = 1")
     elif likelihood == "proposal":
         where.append("likelihood = 10")
     rows = c.execute(f"""SELECT publication, issue_date, COUNT(*) as insertion_count,
-                        SUM(ad_cost) as total_revenue, SUM(net_cost) as total_net
+                        SUM(bill_cost) as total_revenue, SUM(net_cost) as total_net
                         FROM sm_page_history
                         WHERE {' AND '.join(where)}
                         GROUP BY publication, issue_date
@@ -506,17 +574,27 @@ def report_rep_performance():
         year = year[2:]
     pub = request.args.get("publication", "")
     likelihood = request.args.get("likelihood", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
     where = ["canceled = 0", "issue_date LIKE ?", "rep1 != ''"]
     params = [f"%/{year} %"]
     if pub:
         where.append("publication = ?")
         params.append(pub)
+    if start_date:
+        where.append(ISSUE_DATE_SORT_EXPR + " >= ?")
+        sd = start_date.replace("-", "")
+        params.append(sd[2:6] + sd[6:8])
+    if end_date:
+        where.append(ISSUE_DATE_SORT_EXPR + " <= ?")
+        ed = end_date.replace("-", "")
+        params.append(ed[2:6] + ed[6:8])
     if likelihood == "confirmed":
         where.append("likelihood = 1")
     elif likelihood == "proposal":
         where.append("likelihood = 10")
     rows = db.execute(f"""SELECT rep1 as rep, publication, COUNT(*) as insertions,
-                         SUM(ad_cost) as revenue
+                         SUM(bill_cost) as revenue
                          FROM sm_page_history
                          WHERE {' AND '.join(where)}
                          GROUP BY rep1, publication
@@ -1816,6 +1894,22 @@ def delete_contract(contract_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/sales/account-agency")
+def account_agency():
+    name = request.args.get("account", "").strip()
+    if not name:
+        return jsonify({"agency_name": "", "agency_discount": 0})
+    db = get_db()
+    row = db.execute("""SELECT agency_name, agency_discount
+        FROM sm_contracts
+        WHERE account_name = ? AND agency_name IS NOT NULL AND agency_name != ''
+        ORDER BY contract_start DESC LIMIT 1""", (name,)).fetchone()
+    db.close()
+    if row:
+        return jsonify({"agency_name": row["agency_name"], "agency_discount": row["agency_discount"] or 0})
+    return jsonify({"agency_name": "", "agency_discount": 0})
+
+
 @app.route("/api/sales/insertions", methods=["POST"])
 def create_insertion():
     db = get_db()
@@ -1892,38 +1986,53 @@ LOOKUP_TABLES = {
         "table": "sm_publications", "pk": "publication",
         "cols": ["publication", "pub_num", "gl_code"],
         "label": "Publication",
+        "history_col": "publication",
     },
     "ad_types": {
         "table": "sm_ad_types", "pk": "ad_type",
         "cols": ["ad_type"],
         "label": "Ad Type",
+        "history_col": "type_ad",
     },
     "ad_sizes": {
         "table": "sm_ad_sizes", "pk": "ad_size",
         "cols": ["ad_size"],
         "label": "Ad Size",
+        "history_col": "ad_size",
     },
     "ad_colors": {
         "table": "sm_ad_colors", "pk": "color",
         "cols": ["color"],
         "label": "Ad Color",
+        "history_col": "color",
     },
     "reps": {
         "table": "sm_reps", "pk": "rep_id",
         "cols": ["rep_id", "rep", "territory_id", "territory", "commission"],
         "label": "Rep",
+        "history_col": "rep1",
     },
     "categories": {
         "table": "sm_product_categories", "pk": "category",
         "cols": ["category"],
         "label": "Product Category",
+        "history_col": "category",
     },
     "prod_statuses": {
         "table": "sm_prod_statuses", "pk": "id",
         "cols": ["id", "status"],
         "label": "Production Status",
+        "history_col": None,
     },
 }
+
+def _ensure_lookup_active_cols(db):
+    for cfg in LOOKUP_TABLES.values():
+        try:
+            db.execute(f"ALTER TABLE {cfg['table']} ADD COLUMN active INTEGER DEFAULT 1")
+            db.commit()
+        except Exception:
+            pass
 
 
 @app.route("/api/admin/lookups/<table_key>")
@@ -1932,9 +2041,22 @@ def admin_lookup_list(table_key):
         return jsonify({"error": "unknown table"}), 404
     cfg = LOOKUP_TABLES[table_key]
     db = get_db()
-    rows = db.execute(f"SELECT * FROM {cfg['table']} ORDER BY {cfg['pk']}").fetchall()
+    _ensure_lookup_active_cols(db)
+    rows = db.execute(f"SELECT * FROM {cfg['table']} ORDER BY active DESC, {cfg['pk']}").fetchall()
+    result = []
+    for r in rows:
+        row = dict(r)
+        if "active" not in row:
+            row["active"] = 1
+        has_history = False
+        if cfg.get("history_col"):
+            cnt = db.execute(f"SELECT COUNT(*) FROM sm_page_history WHERE {cfg['history_col']} = ?",
+                             (row[cfg["pk"]],)).fetchone()[0]
+            has_history = cnt > 0
+        row["has_history"] = has_history
+        result.append(row)
     db.close()
-    return jsonify({"rows": [dict(r) for r in rows], "config": cfg})
+    return jsonify({"rows": result, "config": cfg})
 
 
 @app.route("/api/admin/lookups/<table_key>", methods=["POST"])
@@ -1964,7 +2086,7 @@ def admin_lookup_update(table_key, pk_val):
     db = get_db()
     sets = []
     params = []
-    for c in cfg["cols"]:
+    for c in cfg["cols"] + ["active"]:
         if c in data and c != cfg["pk"]:
             sets.append(f"{c} = ?")
             params.append(data[c])
@@ -1986,6 +2108,12 @@ def admin_lookup_delete(table_key, pk_val):
         return jsonify({"error": "unknown table"}), 404
     cfg = LOOKUP_TABLES[table_key]
     db = get_db()
+    if cfg.get("history_col"):
+        cnt = db.execute(f"SELECT COUNT(*) FROM sm_page_history WHERE {cfg['history_col']} = ?",
+                         (pk_val,)).fetchone()[0]
+        if cnt > 0:
+            db.close()
+            return jsonify({"error": "Cannot delete — this item has history. Set it inactive instead."}), 409
     db.execute(f"DELETE FROM {cfg['table']} WHERE {cfg['pk']} = ?", (pk_val,))
     log_audit(db, "delete", cfg["label"], pk_val)
     db.commit()
@@ -2522,8 +2650,9 @@ def global_search():
     contacts = c.execute("""SELECT id, firstname, lastname, email, company, jobtitle, phone
         FROM contacts
         WHERE firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR company LIKE ?
+           OR (firstname || ' ' || lastname) LIKE ?
         ORDER BY lastname, firstname LIMIT 15""",
-        (like, like, like, like)).fetchall()
+        (like, like, like, like, like)).fetchall()
 
     companies = c.execute("""SELECT id, name, domain, industry, city, state
         FROM companies
@@ -2551,68 +2680,95 @@ def pipeline():
     c = db.cursor()
     now = datetime.now()
     yr2 = f"{now.year % 100:02d}"
+    year = request.args.get("year", yr2)
+    pub = request.args.get("publication", "")
     result = {}
 
-    proposals = c.execute("""
+    where_base = ["ph.canceled = 0"]
+    params_base = []
+    if year and year != "all":
+        where_base.append("ph.issue_date LIKE ?")
+        params_base.append(f"%/{year} %")
+    if pub:
+        where_base.append("ph.publication = ?")
+        params_base.append(pub)
+    wb = " AND ".join(where_base)
+
+    where_flat = [w.replace("ph.", "") for w in where_base]
+    wf = " AND ".join(where_flat)
+
+    proposals = c.execute(f"""
         SELECT account_name, publication, issue_date, type_ad, ad_size, ad_cost, rep1,
                sc.id as account_id
         FROM sm_page_history ph
         LEFT JOIN sm_companies sc ON ph.account_name = sc.company
-        WHERE ph.canceled = 0 AND ph.likelihood = 10 AND ph.issue_date LIKE ?
-        ORDER BY substr(ph.issue_date,7,2)||substr(ph.issue_date,1,2)||substr(ph.issue_date,4,2) ASC
-    """, (f"%/{yr2} %",)).fetchall()
+        WHERE {wb} AND ph.likelihood = 10
+        ORDER BY {ISSUE_DATE_SORT_EXPR.replace('issue_date','ph.issue_date')} DESC
+    """, params_base).fetchall()
     result["proposals"] = []
     for r in proposals:
         row = dict(r)
         row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
         result["proposals"].append(row)
 
-    c.execute("""SELECT COUNT(*) as cnt, SUM(ad_cost) as revenue
-        FROM sm_page_history WHERE canceled=0 AND likelihood=10 AND issue_date LIKE ?""",
-        (f"%/{yr2} %",))
+    c.execute(f"""SELECT COUNT(*) as cnt, SUM(ad_cost) as revenue
+        FROM sm_page_history WHERE {wf} AND likelihood=10""", params_base)
     ps = c.fetchone()
     result["proposal_stats"] = {"count": ps["cnt"] or 0, "revenue": ps["revenue"] or 0}
 
-    c.execute("""SELECT COUNT(*) as cnt, SUM(ad_cost) as revenue
-        FROM sm_page_history WHERE canceled=0 AND likelihood=1 AND issue_date LIKE ?""",
-        (f"%/{yr2} %",))
+    c.execute(f"""SELECT COUNT(*) as cnt, SUM(ad_cost) as revenue
+        FROM sm_page_history WHERE {wf} AND likelihood=1""", params_base)
     cs = c.fetchone()
     result["confirmed_stats"] = {"count": cs["cnt"] or 0, "revenue": cs["revenue"] or 0}
 
-    c.execute("""SELECT rep1 as rep, COUNT(*) as proposals, SUM(ad_cost) as value
-        FROM sm_page_history WHERE canceled=0 AND likelihood=10 AND issue_date LIKE ? AND rep1 != ''
-        GROUP BY rep1 ORDER BY value DESC""",
-        (f"%/{yr2} %",))
+    c.execute(f"""SELECT rep1 as rep, COUNT(*) as proposals, SUM(ad_cost) as value
+        FROM sm_page_history WHERE {wf} AND likelihood=10 AND rep1 != ''
+        GROUP BY rep1 ORDER BY value DESC""", params_base)
     result["proposals_by_rep"] = [dict(r) for r in c.fetchall()]
 
-    c.execute("""SELECT account_name, COUNT(*) as insertions, SUM(ad_cost) as revenue
+    lapsed_year = year if (year and year != "all") else yr2
+    prev_year = f"{int(lapsed_year)-1:02d}"
+    lapsed_where = ["canceled=0", "likelihood=1", "issue_date LIKE ?"]
+    lapsed_params = [f"%/{prev_year} %"]
+    if pub:
+        lapsed_where.append("publication = ?")
+        lapsed_params.append(pub)
+    cur_where = ["canceled=0", "issue_date LIKE ?", "likelihood IN (1, 10)"]
+    cur_params = [f"%/{lapsed_year} %"]
+    if pub:
+        cur_where.append("publication = ?")
+        cur_params.append(pub)
+    c.execute(f"""SELECT account_name, COUNT(*) as insertions, SUM(ad_cost) as revenue
         FROM sm_page_history
-        WHERE canceled=0 AND likelihood=1 AND issue_date LIKE ?
+        WHERE {' AND '.join(lapsed_where)}
         GROUP BY account_name
         HAVING account_name NOT IN (
             SELECT DISTINCT account_name FROM sm_page_history
-            WHERE canceled=0 AND issue_date LIKE ? AND likelihood IN (1, 10)
+            WHERE {' AND '.join(cur_where)}
         )
         ORDER BY revenue DESC LIMIT 25""",
-        (f"%/{int(yr2)-1:02d} %", f"%/{yr2} %"))
+        lapsed_params + cur_params)
     result["lapsed_accounts"] = [dict(r) for r in c.fetchall()]
 
-    upcoming_issues = c.execute("""
+    upcoming_issues = c.execute(f"""
         SELECT publication, issue_date,
                SUM(CASE WHEN likelihood=1 THEN 1 ELSE 0 END) as confirmed,
                SUM(CASE WHEN likelihood=10 THEN 1 ELSE 0 END) as proposals,
                SUM(CASE WHEN likelihood=1 THEN ad_cost ELSE 0 END) as confirmed_rev,
                SUM(CASE WHEN likelihood=10 THEN ad_cost ELSE 0 END) as proposal_rev
         FROM sm_page_history
-        WHERE canceled=0 AND issue_date LIKE ?
+        WHERE {wf}
         GROUP BY publication, issue_date
-        ORDER BY substr(issue_date,7,2)||substr(issue_date,1,2)||substr(issue_date,4,2) ASC
-    """, (f"%/{yr2} %",)).fetchall()
+        ORDER BY {ISSUE_DATE_SORT_EXPR} DESC
+    """, params_base).fetchall()
     result["issue_pipeline"] = []
     for r in upcoming_issues:
         row = dict(r)
         row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
         result["issue_pipeline"].append(row)
+
+    c.execute("SELECT DISTINCT substr(issue_date,7,2) as yr FROM sm_page_history WHERE canceled=0 ORDER BY yr DESC")
+    result["years"] = [r["yr"] for r in c.fetchall()]
 
     db.close()
     return jsonify(result)
@@ -2695,9 +2851,13 @@ def production_dashboard():
     now = datetime.now()
     yr2 = f"{now.year % 100:02d}"
     pub = request.args.get("publication", "")
+    year = request.args.get("year", yr2)
 
-    where = ["canceled = 0", "likelihood = 1", "issue_date LIKE ?"]
-    params = [f"%/{yr2} %"]
+    where = ["canceled = 0", "likelihood = 1"]
+    params = []
+    if year and year != "all":
+        where.append("issue_date LIKE ?")
+        params.append(f"%/{year} %")
     if pub:
         where.append("publication = ?")
         params.append(pub)
@@ -2724,7 +2884,7 @@ def production_dashboard():
                         mat_due_date, prod_status_id, materials, mat_track_num
                   FROM sm_page_history
                   WHERE {' AND '.join(missing_where)}
-                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} DESC""", params)
     missing_materials = []
     for row in c.fetchall():
         d = dict(row)
@@ -2738,7 +2898,7 @@ def production_dashboard():
                   FROM sm_page_history
                   WHERE {where_sql}
                   GROUP BY publication, issue_date
-                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} DESC""", params)
     by_issue = []
     for row in c.fetchall():
         d = dict(row)
@@ -2752,8 +2912,82 @@ def production_dashboard():
         by_issue.append(d)
     result["by_issue"] = by_issue
 
+    c.execute("SELECT DISTINCT substr(issue_date,7,2) as yr FROM sm_page_history WHERE canceled=0 AND likelihood=1 ORDER BY yr DESC")
+    result["years"] = [r["yr"] for r in c.fetchall()]
+
     db.close()
     return jsonify(result)
+
+
+@app.route("/api/production/issue")
+def production_issue_detail():
+    db = get_db()
+    c = db.cursor()
+    pub = request.args.get("publication", "")
+    issue_date = request.args.get("issue_date", "")
+    if not pub or not issue_date:
+        db.close()
+        return jsonify({"error": "publication and issue_date required"}), 400
+
+    c.execute("""SELECT ph.page_history_id, ph.account_name, ph.publication,
+                        ph.issue_date, ph.ad_size, ph.type_ad, ph.headline,
+                        ph.page_num, ph.materials, ph.mat_on_hand, ph.mat_expected,
+                        ph.mat_due_date, ph.mat_track_num, ph.mat_changes,
+                        ph.materials_contact_id, ph.prod_status_id, ph.ad_cost,
+                        d.name as contact_name, d.email as contact_email
+                 FROM sm_page_history ph
+                 LEFT JOIN sm_directory d ON ph.materials_contact_id = d.id
+                 WHERE ph.publication = ? AND ph.issue_date = ?
+                   AND ph.canceled = 0 AND ph.likelihood = 1
+                 ORDER BY ph.account_name ASC""", [pub, issue_date])
+    rows = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        rows.append(d)
+    db.close()
+    return jsonify({"insertions": rows, "publication": pub, "issue_date": issue_date})
+
+
+@app.route("/api/production/update/<int:pid>", methods=["PUT"])
+def production_update(pid):
+    db = get_db()
+    c = db.cursor()
+    data = request.get_json(force=True)
+    allowed = {"mat_on_hand", "headline", "materials", "page_num", "mat_track_num", "mat_due_date"}
+    sets = []
+    vals = []
+    for k, v in data.items():
+        if k in allowed:
+            sets.append(f"{k} = ?")
+            vals.append(v)
+    if not sets:
+        db.close()
+        return jsonify({"error": "no valid fields"}), 400
+    vals.append(pid)
+    c.execute(f"UPDATE sm_page_history SET {', '.join(sets)} WHERE page_history_id = ?", vals)
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "updated": pid})
+
+
+@app.route("/api/production/bulk-receive", methods=["PUT"])
+def production_bulk_receive():
+    db = get_db()
+    c = db.cursor()
+    data = request.get_json(force=True)
+    ids = data.get("ids", [])
+    value = data.get("value", 1)
+    if not ids:
+        db.close()
+        return jsonify({"error": "no ids provided"}), 400
+    placeholders = ",".join(["?"] * len(ids))
+    c.execute(f"UPDATE sm_page_history SET mat_on_hand = ? WHERE page_history_id IN ({placeholders})",
+              [value] + ids)
+    db.commit()
+    count = c.rowcount
+    db.close()
+    return jsonify({"ok": True, "updated": count})
 
 
 # ── Invoice / Billing Status ──
@@ -2761,18 +2995,23 @@ def production_dashboard():
 def billing_dashboard():
     db = get_db()
     c = db.cursor()
-    now = datetime.now()
-    yr2 = f"{now.year % 100:02d}"
     pub = request.args.get("publication", "")
+    year = request.args.get("year", "all")
 
-    where = ["canceled = 0", "likelihood = 1", "issue_date LIKE ?"]
-    params = [f"%/{yr2} %"]
+    where = ["canceled = 0", "likelihood = 1"]
+    params = []
+    if year and year != "all":
+        where.append("issue_date LIKE ?")
+        params.append(f"%/{year} %")
     if pub:
         where.append("publication = ?")
         params.append(pub)
     where_sql = " AND ".join(where)
 
     result = {}
+
+    c.execute("SELECT DISTINCT substr(issue_date,7,2) as yr FROM sm_page_history WHERE canceled=0 AND likelihood=1 ORDER BY yr DESC")
+    result["years"] = [r["yr"] for r in c.fetchall()]
 
     c.execute(f"""SELECT
                     SUM(CASE WHEN bill_cost > 0 THEN 1 ELSE 0 END) as billed,
@@ -2795,7 +3034,7 @@ def billing_dashboard():
     c.execute(f"""SELECT account_name, publication, issue_date, type_ad, ad_size, ad_cost, rep1
                   FROM sm_page_history
                   WHERE {' AND '.join(unbilled_where)}
-                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} DESC""", params)
     unbilled = []
     for row in c.fetchall():
         d = dict(row)
@@ -2807,7 +3046,7 @@ def billing_dashboard():
     c.execute(f"""SELECT account_name, invoice_num, invoice_date, bill_cost, issue_date, publication
                   FROM sm_page_history
                   WHERE {' AND '.join(unpaid_where)}
-                  ORDER BY invoice_date ASC""", params)
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} DESC""", params)
     unpaid = []
     for row in c.fetchall():
         d = dict(row)
@@ -2816,8 +3055,466 @@ def billing_dashboard():
         unpaid.append(d)
     result["unpaid"] = unpaid
 
+    c.execute(f"""SELECT publication, issue_date, COUNT(*) as total,
+                        SUM(CASE WHEN invoice_num IS NOT NULL AND invoice_num != '' THEN 1 ELSE 0 END) as invoiced,
+                        SUM(CASE WHEN paid_date IS NOT NULL AND paid_date != '' THEN 1 ELSE 0 END) as paid,
+                        SUM(CASE WHEN bill_cost > 0 THEN bill_cost ELSE 0 END) as revenue
+                  FROM sm_page_history
+                  WHERE {where_sql}
+                  GROUP BY publication, issue_date
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} DESC""", params)
+    by_issue = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        d["revenue"] = d["revenue"] or 0
+        by_issue.append(d)
+    result["by_issue"] = by_issue
+
     db.close()
     return jsonify(result)
+
+
+@app.route("/api/billing/issue")
+def billing_issue_detail():
+    db = get_db()
+    c = db.cursor()
+    pub = request.args.get("publication", "")
+    issue_date = request.args.get("issue_date", "")
+    if not pub or not issue_date:
+        db.close()
+        return jsonify({"error": "publication and issue_date required"}), 400
+
+    c.execute("""SELECT ph.page_history_id, ph.account_name, ph.publication,
+                        ph.issue_date, ph.ad_size, ph.type_ad, ph.headline,
+                        ph.page_num, ph.color, ph.ad_cost, ph.discount,
+                        ph.bill_cost, ph.net_cost, ph.invoice_num, ph.invoice_date,
+                        ph.paid_date, ph.bill_name, ph.materials_contact_id,
+                        d.name as contact_name, d.email as contact_email,
+                        d.company as contact_company, d.street as contact_street,
+                        d.street2 as contact_street2, d.city as contact_city,
+                        d.state as contact_state, d.zip as contact_zip
+                 FROM sm_page_history ph
+                 LEFT JOIN sm_directory d ON ph.materials_contact_id = d.id
+                 WHERE ph.publication = ? AND ph.issue_date = ?
+                   AND ph.canceled = 0 AND ph.likelihood = 1
+                 ORDER BY ph.account_name ASC""", [pub, issue_date])
+    rows = []
+    for row in c.fetchall():
+        d = dict(row)
+        d["issue_date_iso"] = _parse_sm_date(d["issue_date"])
+        rows.append(d)
+    db.close()
+    return jsonify({"insertions": rows, "publication": pub, "issue_date": issue_date})
+
+
+@app.route("/api/billing/update/<int:pid>", methods=["PUT"])
+def billing_update(pid):
+    db = get_db()
+    c = db.cursor()
+    data = request.get_json(force=True)
+    allowed = {"bill_cost", "discount", "paid_date", "invoice_num", "invoice_date", "bill_name"}
+    sets = []
+    vals = []
+    for k, v in data.items():
+        if k in allowed:
+            sets.append(f"{k} = ?")
+            vals.append(v)
+    if not sets:
+        db.close()
+        return jsonify({"error": "no valid fields"}), 400
+    vals.append(pid)
+    c.execute(f"UPDATE sm_page_history SET {', '.join(sets)} WHERE page_history_id = ?", vals)
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "updated": pid})
+
+
+@app.route("/api/billing/bulk-paid", methods=["PUT"])
+def billing_bulk_paid():
+    db = get_db()
+    c = db.cursor()
+    data = request.get_json(force=True)
+    ids = data.get("ids", [])
+    paid_date = data.get("paid_date", datetime.now().strftime("%m/%d/%y 00:00:00"))
+    if not ids:
+        db.close()
+        return jsonify({"error": "no ids provided"}), 400
+    placeholders = ",".join(["?"] * len(ids))
+    c.execute(f"UPDATE sm_page_history SET paid_date = ? WHERE page_history_id IN ({placeholders})",
+              [paid_date] + ids)
+    db.commit()
+    count = c.rowcount
+    db.close()
+    return jsonify({"ok": True, "updated": count})
+
+
+@app.route("/api/billing/generate-invoices", methods=["POST"])
+def generate_invoices():
+    db = get_db()
+    c = db.cursor()
+    data = request.get_json(force=True)
+    ids = data.get("ids", [])
+    if not ids:
+        db.close()
+        return jsonify({"error": "no ids provided"}), 400
+
+    c.execute("SELECT MAX(CAST(SUBSTR(invoice_num, INSTR(invoice_num,'-')+1) AS INTEGER)) FROM sm_page_history WHERE invoice_num LIKE '%-%' AND LENGTH(invoice_num) > 5")
+    max_seq = c.fetchone()[0] or 60121
+    next_seq = max_seq + 1
+
+    now = datetime.now()
+    invoice_date = now.strftime("%m/%d/%y 00:00:00")
+    results = []
+
+    for pid in ids:
+        c.execute("SELECT ad_cost, discount, bill_cost, invoice_num, issue_date FROM sm_page_history WHERE page_history_id = ?", [pid])
+        row = c.fetchone()
+        if not row:
+            continue
+        if row["invoice_num"] and len(row["invoice_num"]) > 3:
+            results.append({"pid": pid, "invoice_num": row["invoice_num"], "skipped": True})
+            continue
+
+        issue = row["issue_date"] or ""
+        parts = issue.split("/")
+        if len(parts) >= 3:
+            mm = parts[0].zfill(2)
+            yy = parts[2][:2]
+        else:
+            mm = f"{now.month:02d}"
+            yy = f"{now.year % 100:02d}"
+
+        inv_num = f"{mm}{yy}-{next_seq}"
+        next_seq += 1
+
+        ad_cost = row["ad_cost"] or 0
+        discount = row["discount"] or 0
+        bill_cost = row["bill_cost"]
+        if bill_cost is None or bill_cost == 0:
+            bill_cost = max(0, ad_cost - discount)
+
+        c.execute("""UPDATE sm_page_history
+                     SET invoice_num = ?, invoice_date = ?, bill_cost = ?
+                     WHERE page_history_id = ?""",
+                  [inv_num, invoice_date, bill_cost, pid])
+        results.append({"pid": pid, "invoice_num": inv_num, "bill_cost": bill_cost})
+
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "invoices": results})
+
+
+@app.route("/api/billing/invoice-pdf", methods=["POST"])
+def invoice_pdf_batch():
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.pdfgen import canvas as pdfcanvas
+
+    db = get_db()
+    c = db.cursor()
+    data = request.get_json(force=True)
+    ids = data.get("ids", [])
+    if not ids:
+        db.close()
+        return jsonify({"error": "no ids"}), 400
+
+    placeholders = ",".join(["?"] * len(ids))
+    c.execute(f"""SELECT ph.page_history_id, ph.account_name, ph.publication,
+                         ph.issue_date, ph.ad_size, ph.type_ad, ph.headline,
+                         ph.page_num, ph.color, ph.ad_cost, ph.discount,
+                         ph.bill_cost, ph.invoice_num, ph.invoice_date,
+                         ph.bill_name, ph.materials_contact_id, ph.order_num,
+                         d.name as contact_name, d.company as contact_company,
+                         d.street as contact_street, d.street2 as contact_street2,
+                         d.city as contact_city, d.state as contact_state,
+                         d.zip as contact_zip
+                  FROM sm_page_history ph
+                  LEFT JOIN sm_directory d ON ph.materials_contact_id = d.id
+                  WHERE ph.page_history_id IN ({placeholders})
+                  ORDER BY ph.account_name ASC""", ids)
+    rows = [dict(r) for r in c.fetchall()]
+    db.close()
+
+    if not rows:
+        return jsonify({"error": "no matching insertions"}), 404
+
+    buf = io.BytesIO()
+    c_pdf = pdfcanvas.Canvas(buf, pagesize=letter)
+    W, H = letter
+
+    for row in rows:
+        _draw_invoice_page(c_pdf, row, W, H)
+        c_pdf.showPage()
+    c_pdf.save()
+    buf.seek(0)
+
+    fname = f"invoices_{datetime.now().strftime('%Y%m%d')}.pdf"
+    return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=fname)
+
+
+def _draw_invoice_page(c, row, W, H):
+    from reportlab.lib.units import inch
+
+    margin = 0.6 * inch
+    y = H - margin
+
+    logo_path = os.path.join(os.path.dirname(__file__), "asla_logo.png")
+    if os.path.exists(logo_path):
+        c.drawImage(logo_path, margin, y - 60, width=50, height=60, mask="auto")
+    else:
+        _draw_asla_logo(c, margin, y - 55, 60, 55)
+
+    c.setFont("Helvetica-Bold", 13)
+    c.drawCentredString(W / 2, y - 8, "American Society of Landscape Architects")
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(W / 2, y - 20, "636 Eye Street, N.W. Washington, DC 20001-3736")
+    c.drawCentredString(W / 2, y - 31, "PHONE (202) 898 2444")
+    c.drawCentredString(W / 2, y - 42, "FAX (202) 898 0342")
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(W / 2, y - 54, "FEDERAL ID# 53 025 9019")
+
+    c.setFont("Helvetica-BoldOblique", 22)
+    c.drawRightString(W - margin, y - 32, "INVOICE")
+
+    y -= 80
+
+    c.setFont("Helvetica-Bold", 8)
+    c.rect(margin, y - 12, 55, 12)
+    c.drawString(margin + 3, y - 10, "Bill To")
+    y -= 14
+
+    company = row.get("contact_company") or row.get("account_name") or ""
+    attn = row.get("bill_name") or row.get("contact_name") or ""
+    street = row.get("contact_street") or ""
+    street2 = row.get("contact_street2") or ""
+    city = row.get("contact_city") or ""
+    state = row.get("contact_state") or ""
+    zipcode = row.get("contact_zip") or ""
+    city_line = f"{city} {state} {zipcode}".strip()
+
+    if not street and attn:
+        from_db = _lookup_billing_address(row)
+        if from_db:
+            company = from_db.get("company", company)
+            street = from_db.get("street", "")
+            street2 = from_db.get("street2", "")
+            city = from_db.get("city", "")
+            state = from_db.get("state", "")
+            zipcode = from_db.get("zip", "")
+            city_line = f"{city} {state} {zipcode}".strip()
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(margin, y - 2, company)
+    c.setFont("Helvetica-Bold", 9)
+    if attn:
+        c.drawString(margin, y - 13, f"Attn : {attn}")
+    c.setFont("Helvetica", 9)
+    addr_y = y - 24
+    if street:
+        c.drawString(margin, addr_y, street)
+        addr_y -= 11
+    if street2:
+        c.drawString(margin, addr_y, street2)
+        addr_y -= 11
+    if city_line:
+        c.drawString(margin, addr_y, city_line)
+
+    inv_x = W - margin - 180
+    inv_top = y + 14
+    c.setFont("Helvetica-Bold", 8)
+    fields = [
+        ("Invoice #", row.get("invoice_num") or ""),
+        ("Invoice Date", _fmt_invoice_date(row.get("invoice_date"))),
+        ("Order #", row.get("order_num") or ""),
+        ("Terms", "Net 30 Days"),
+    ]
+    for i, (label, val) in enumerate(fields):
+        fy = inv_top - i * 14
+        c.rect(inv_x, fy - 12, 80, 14)
+        c.rect(inv_x + 80, fy - 12, 100, 14)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(inv_x + 3, fy - 9, label)
+        c.setFont("Helvetica-Bold" if i == 0 else "Helvetica", 9)
+        c.drawString(inv_x + 83, fy - 9, val)
+
+    y -= 75
+
+    c.setFont("Helvetica-Bold", 8)
+    c.rect(margin, y, 110, 14)
+    c.drawString(margin + 3, y + 4, "Insertion Details:")
+    y -= 2
+
+    issue_date_fmt = _fmt_invoice_date(row.get("issue_date"))
+    desc = f"{row.get('color') or '4 Color'} , {row.get('ad_size') or ''} , {row.get('type_ad') or ''} Ad."
+    details = [
+        ("Insertion Id", str(row.get("page_history_id", ""))),
+        ("Advertiser Name", row.get("account_name") or ""),
+        ("Publication", row.get("publication") or ""),
+        ("Description", desc),
+        ("Headline", row.get("headline") or ""),
+    ]
+    side_fields = [
+        ("Issue Date", issue_date_fmt),
+        ("Page Num", str(row.get("page_num") or "")),
+    ]
+
+    for i, (label, val) in enumerate(details):
+        fy = y - i * 14
+        c.rect(margin, fy - 12, 100, 14)
+        c.rect(margin + 100, fy - 12, 220, 14)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(margin + 3, fy - 9, label)
+        c.setFont("Helvetica", 9)
+        c.drawString(margin + 103, fy - 9, val[:50])
+
+    for i, (label, val) in enumerate(side_fields):
+        fy = y - (2 + i) * 14
+        sx = margin + 320
+        c.rect(sx, fy - 12, 65, 14)
+        c.rect(sx + 65, fy - 12, 80, 14)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(sx + 3, fy - 9, label)
+        c.setFont("Helvetica", 9)
+        c.drawString(sx + 68, fy - 9, val)
+
+    y -= len(details) * 14 + 8
+
+    ad_cost = row.get("ad_cost") or 0
+    discount = row.get("discount") or 0
+    bill_cost = row.get("bill_cost") or 0
+
+    c.setFont("Helvetica-Bold", 9)
+    c.rect(margin, y - 14, 180, 14)
+    c.drawString(margin + 3, y - 11, "Ad Cost for this Insertion :")
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin + 183, y - 11, f"${ad_cost:,.2f}")
+
+    y -= 30
+
+    if discount > 0:
+        if bill_cost == 0 or discount >= ad_cost:
+            label = "Comp Ad:"
+        else:
+            label = "Rate Adjustment:"
+        c.setFont("Helvetica-Bold", 11)
+        c.rect(margin + 80, y - 14, len(label) * 7 + 90, 16)
+        c.drawString(margin + 85, y - 10, f"{label}   ${discount:,.2f}")
+    elif ad_cost > 0 and bill_cost > 0 and bill_cost < ad_cost:
+        adj = ad_cost - bill_cost
+        c.setFont("Helvetica-Bold", 11)
+        c.rect(margin + 80, y - 14, 250, 16)
+        c.drawString(margin + 85, y - 10, f"Ad Adjustment - Discount:   ${adj:,.2f}")
+
+    y -= 30
+    c.setFont("Helvetica-Bold", 8)
+    c.rect(margin, y - 14, 75, 14)
+    c.drawString(margin + 3, y - 11, "Notes:")
+
+    y = 280
+    c.setLineWidth(1.5)
+    c.line(margin, y, W - margin, y)
+    y -= 18
+
+    prepaid = 0
+    amount_to_pay = max(0, bill_cost - prepaid)
+    summary = [
+        ("Ad Cost for this Insertion :", f"${ad_cost:,.2f}"),
+        ("Total Discounts for this Insertion :", f"${discount:,.2f}"),
+        ("Bill Cost for this Insertion :", f"${bill_cost:,.2f}"),
+        ("Amount Prepaid for this Insertion :", f"${prepaid:,.2f}"),
+        ("Amount to pay  for this Insertion :", f"${amount_to_pay:,.2f}"),
+    ]
+    sx = W / 2 - 60
+    for i, (label, val) in enumerate(summary):
+        fy = y - i * 16
+        c.rect(sx, fy - 12, 200, 16)
+        c.rect(sx + 200, fy - 12, 80, 16)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(sx + 3, fy - 8, label)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawRightString(sx + 275, fy - 8, val)
+
+    y -= len(summary) * 16 + 15
+    c.setFont("Helvetica", 8)
+    c.drawString(margin, y, "Make checks payable to ASLA US $ only. A fee will be assessed on all returned checks.")
+    y -= 14
+    c.drawString(margin, y, "ASLA also accepts Visa, MasterCard & American Express. Circle card type.")
+
+    y -= 30
+    c.setLineWidth(0.5)
+    c.line(margin, y, W / 2 + 40, y)
+    c.line(W / 2 + 80, y, W - margin, y)
+    c.setFont("Helvetica", 8)
+    c.drawString(margin + 20, y - 12, "Card Number")
+    c.drawString(W / 2 + 100, y - 12, "Exp Date")
+
+    y -= 30
+    c.line(margin, y, margin + 100, y)
+    c.line(margin + 120, y, W - margin, y)
+    c.setFont("Helvetica", 8)
+    c.drawString(margin + 10, y - 12, "Card Security Code")
+    c.drawString(margin + 130, y - 12, "Billing Address")
+
+    y -= 30
+    c.line(margin, y, W / 2 - 20, y)
+    c.line(W / 2 + 20, y, W - margin, y)
+    c.setFont("Helvetica", 8)
+    c.drawString(margin + 10, y - 12, "Name on Card (Please print)")
+    c.drawString(W / 2 + 40, y - 12, "Signature")
+
+
+def _draw_asla_logo(c, x, y, w, h):
+    c.saveState()
+    c.setLineWidth(1.5)
+    stripe_count = 12
+    step = h / stripe_count
+    for i in range(stripe_count):
+        if i % 2 == 0:
+            sy = y + i * step
+            c.rect(x, sy, w, step, fill=1, stroke=0)
+    c.setFillColor("white")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(x + w / 2, y + 6, "ASLA")
+    c.restoreState()
+
+
+def _fmt_invoice_date(dt_str):
+    if not dt_str:
+        return ""
+    try:
+        parts = dt_str.replace(" 00:00:00", "").split("/")
+        if len(parts) == 3:
+            m, d, yr = parts
+            if len(yr) == 2:
+                yr = "20" + yr
+            return f"{int(m)}/{int(d)}/{yr}"
+    except Exception:
+        pass
+    return dt_str
+
+
+def _lookup_billing_address(row):
+    bill_name = row.get("bill_name") or ""
+    account = row.get("account_name") or ""
+    if not bill_name:
+        return None
+    db = get_db()
+    c = db.cursor()
+    c.execute("""SELECT company, street, street2, city, state, zip
+                 FROM sm_directory
+                 WHERE name = ? AND company = ?
+                 LIMIT 1""", [bill_name, account])
+    r = c.fetchone()
+    if not r:
+        c.execute("""SELECT company, street, street2, city, state, zip
+                     FROM sm_directory
+                     WHERE name = ?
+                     ORDER BY default_contact DESC
+                     LIMIT 1""", [bill_name])
+        r = c.fetchone()
+    db.close()
+    return dict(r) if r else None
 
 
 # ── Production Calendar ──
@@ -2847,7 +3544,7 @@ def production_calendar():
                   FROM sm_page_history
                   WHERE {where_sql}
                   GROUP BY issue_date
-                  ORDER BY {ISSUE_DATE_SORT_EXPR} ASC""", params)
+                  ORDER BY {ISSUE_DATE_SORT_EXPR} DESC""", params)
 
     result = []
     for row in c.fetchall():
@@ -3017,6 +3714,583 @@ def audit_trail():
         "total": total, "page": page, "per_page": per_page,
         "total_pages": max(1, (total + per_page - 1) // per_page),
     })
+
+
+@app.route("/api/reports/ar-aging")
+def report_ar_aging():
+    db = get_db()
+    pub = request.args.get("publication", "")
+    where = ["canceled = 0", "invoice_num IS NOT NULL", "invoice_num != ''",
+             "(paid_date IS NULL OR paid_date = '')"]
+    params = []
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    rows = db.execute(f"""SELECT account_name, invoice_num, invoice_date, bill_cost,
+                          publication, issue_date, agency_name, bill_name
+                          FROM sm_page_history
+                          WHERE {' AND '.join(where)}
+                          ORDER BY account_name, invoice_date""", params).fetchall()
+    from datetime import date
+    today = date.today()
+    buckets = {"current": [], "days_30": [], "days_60": [], "days_90": [], "over_90": []}
+    totals = {"current": 0, "days_30": 0, "days_60": 0, "days_90": 0, "over_90": 0}
+    for r in rows:
+        row = dict(r)
+        inv_date_str = row.get("invoice_date") or ""
+        row["invoice_date_iso"] = _parse_sm_date(inv_date_str)
+        row["issue_date_iso"] = _parse_sm_date(row.get("issue_date") or "")
+        # Parse invoice date to calculate age
+        age_days = 0
+        if inv_date_str:
+            try:
+                parts = inv_date_str.split("/")
+                if len(parts) >= 3:
+                    m, d = int(parts[0]), int(parts[1])
+                    y = int(parts[2].split()[0])
+                    y = y + 2000 if y < 100 else y
+                    inv_date = date(y, m, d)
+                    age_days = (today - inv_date).days
+            except (ValueError, IndexError):
+                pass
+        row["age_days"] = age_days
+        amt = row.get("bill_cost") or 0
+        if age_days <= 0:
+            buckets["current"].append(row)
+            totals["current"] += amt
+        elif age_days <= 30:
+            buckets["days_30"].append(row)
+            totals["days_30"] += amt
+        elif age_days <= 60:
+            buckets["days_60"].append(row)
+            totals["days_60"] += amt
+        elif age_days <= 90:
+            buckets["days_90"].append(row)
+            totals["days_90"] += amt
+        else:
+            buckets["over_90"].append(row)
+            totals["over_90"] += amt
+    # Summarize by account
+    acct_summary = {}
+    for bucket_name, items in buckets.items():
+        for item in items:
+            acct = item["account_name"]
+            if acct not in acct_summary:
+                acct_summary[acct] = {"account_name": acct, "current": 0, "days_30": 0, "days_60": 0, "days_90": 0, "over_90": 0, "total": 0}
+            acct_summary[acct][bucket_name] += item.get("bill_cost") or 0
+            acct_summary[acct]["total"] += item.get("bill_cost") or 0
+    db.close()
+    return jsonify({
+        "totals": totals,
+        "grand_total": sum(totals.values()),
+        "by_account": sorted(acct_summary.values(), key=lambda x: -x["total"]),
+        "detail_count": sum(len(v) for v in buckets.values())
+    })
+
+@app.route("/api/reports/statement/<account_name>")
+def client_statement(account_name):
+    db = get_db()
+    rows = db.execute("""SELECT invoice_num, invoice_date, issue_date, publication,
+                          bill_cost, paid_date, type_ad, ad_size
+                          FROM sm_page_history
+                          WHERE account_name = ? AND canceled = 0
+                          AND invoice_num IS NOT NULL AND invoice_num != ''
+                          ORDER BY invoice_date DESC""",
+                      (account_name,)).fetchall()
+    result = []
+    total_billed = 0
+    total_paid = 0
+    total_outstanding = 0
+    for r in rows:
+        row = dict(r)
+        row["invoice_date_iso"] = _parse_sm_date(row.get("invoice_date") or "")
+        row["issue_date_iso"] = _parse_sm_date(row.get("issue_date") or "")
+        amt = row.get("bill_cost") or 0
+        paid = bool(row.get("paid_date") and row["paid_date"].strip())
+        row["status"] = "Paid" if paid else "Outstanding"
+        total_billed += amt
+        if paid:
+            total_paid += amt
+        else:
+            total_outstanding += amt
+        result.append(row)
+    db.close()
+    return jsonify({
+        "account_name": account_name,
+        "items": result,
+        "total_billed": total_billed,
+        "total_paid": total_paid,
+        "total_outstanding": total_outstanding
+    })
+
+@app.route("/api/reports/statement/<account_name>/pdf")
+def client_statement_pdf(account_name):
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.pdfgen import canvas as pdfcanvas
+    from reportlab.lib import colors as rl_colors
+    buf = io.BytesIO()
+    c = pdfcanvas.Canvas(buf, pagesize=letter)
+    w, h = letter
+    margin = 50
+    y = h - margin
+    # Logo
+    logo_path = os.path.join(os.path.dirname(__file__), "asla_logo.png")
+    if os.path.exists(logo_path):
+        c.drawImage(logo_path, margin, y - 60, width=50, height=60, mask="auto")
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(margin + 60, y - 20, "ASLA")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin + 60, y - 35, "636 Eye Street NW, Washington, DC 20001")
+    c.drawString(margin + 60, y - 48, "202-898-2444")
+    y -= 80
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(margin, y, f"Statement of Account")
+    y -= 18
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, y, f"Account: {account_name}")
+    y -= 15
+    c.drawString(margin, y, f"Date: {datetime.now().strftime('%B %d, %Y')}")
+    y -= 25
+    db = get_db()
+    rows = db.execute("""SELECT invoice_num, invoice_date, issue_date, publication,
+                          bill_cost, paid_date, type_ad
+                          FROM sm_page_history
+                          WHERE account_name = ? AND canceled = 0
+                          AND invoice_num IS NOT NULL AND invoice_num != ''
+                          AND (paid_date IS NULL OR paid_date = '')
+                          ORDER BY invoice_date""",
+                      (account_name,)).fetchall()
+    db.close()
+    # Table header
+    c.setFont("Helvetica-Bold", 9)
+    cols = [margin, margin+80, margin+170, margin+310, margin+400, margin+470]
+    headers = ["Invoice #", "Invoice Date", "Publication", "Type", "Issue Date", "Amount"]
+    for i, h_text in enumerate(headers):
+        c.drawString(cols[i], y, h_text)
+    y -= 3
+    c.setStrokeColor(rl_colors.HexColor("#003a49"))
+    c.setLineWidth(1)
+    c.line(margin, y, w - margin, y)
+    y -= 14
+    c.setFont("Helvetica", 9)
+    total = 0
+    for r in rows:
+        if y < 80:
+            c.showPage()
+            y = h - margin
+            c.setFont("Helvetica", 9)
+        inv_date_iso = _parse_sm_date(r["invoice_date"] or "")
+        issue_date_iso = _parse_sm_date(r["issue_date"] or "")
+        amt = r["bill_cost"] or 0
+        total += amt
+        c.drawString(cols[0], y, r["invoice_num"] or "")
+        c.drawString(cols[1], y, inv_date_iso)
+        c.drawString(cols[2], y, (r["publication"] or "")[:22])
+        c.drawString(cols[3], y, (r["type_ad"] or "")[:14])
+        c.drawString(cols[4], y, issue_date_iso)
+        c.drawRightString(w - margin, y, f"${amt:,.2f}")
+        y -= 14
+    y -= 5
+    c.setLineWidth(1.5)
+    c.line(margin, y, w - margin, y)
+    y -= 16
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, "Total Outstanding:")
+    c.drawRightString(w - margin, y, f"${total:,.2f}")
+    c.save()
+    buf.seek(0)
+    return send_file(buf, mimetype="application/pdf",
+                     download_name=f"statement_{account_name.replace(' ','_')}.pdf")
+
+@app.route("/api/sales/proposal-pdf", methods=["POST"])
+def proposal_pdf():
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.pdfgen import canvas as pdfcanvas
+    from reportlab.lib import colors as rl_colors
+    data = request.get_json()
+    account = data.get("account_name", "")
+    contact = data.get("contact_name", "")
+    items = data.get("items", [])
+    notes = data.get("notes", "")
+    buf = io.BytesIO()
+    c = pdfcanvas.Canvas(buf, pagesize=letter)
+    w, h = letter
+    margin = 50
+    y = h - margin
+    logo_path = os.path.join(os.path.dirname(__file__), "asla_logo.png")
+    if os.path.exists(logo_path):
+        c.drawImage(logo_path, margin, y - 60, width=50, height=60, mask="auto")
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(margin + 60, y - 20, "ASLA")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin + 60, y - 35, "636 Eye Street NW, Washington, DC 20001")
+    c.drawString(margin + 60, y - 48, "202-898-2444")
+    y -= 80
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(margin, y, "Advertising Proposal")
+    y -= 22
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, y, f"Prepared for: {account}")
+    if contact:
+        y -= 15
+        c.drawString(margin, y, f"Attention: {contact}")
+    y -= 15
+    c.drawString(margin, y, f"Date: {datetime.now().strftime('%B %d, %Y')}")
+    y -= 30
+    # Items table
+    c.setFont("Helvetica-Bold", 9)
+    cols = [margin, margin+130, margin+230, margin+310, margin+380, margin+440]
+    for i, ht in enumerate(["Publication", "Ad Type", "Size", "Color", "Issues", "Cost"]):
+        c.drawString(cols[i], y, ht)
+    y -= 3
+    c.setStrokeColor(rl_colors.HexColor("#003a49"))
+    c.setLineWidth(1)
+    c.line(margin, y, w - margin, y)
+    y -= 14
+    c.setFont("Helvetica", 9)
+    total = 0
+    for item in items:
+        if y < 100:
+            c.showPage()
+            y = h - margin
+            c.setFont("Helvetica", 9)
+        cost = item.get("cost", 0)
+        total += cost
+        c.drawString(cols[0], y, (item.get("publication") or "")[:20])
+        c.drawString(cols[1], y, (item.get("ad_type") or "")[:16])
+        c.drawString(cols[2], y, (item.get("size") or "")[:12])
+        c.drawString(cols[3], y, (item.get("color") or "")[:10])
+        c.drawString(cols[4], y, str(item.get("issues", "")))
+        c.drawRightString(w - margin, y, f"${cost:,.2f}")
+        y -= 14
+    y -= 5
+    c.setLineWidth(1.5)
+    c.line(margin, y, w - margin, y)
+    y -= 16
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, "Total Investment:")
+    c.drawRightString(w - margin, y, f"${total:,.2f}")
+    if notes:
+        y -= 30
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(margin, y, "Notes:")
+        y -= 14
+        c.setFont("Helvetica", 9)
+        for line in notes.split("\n"):
+            if y < 60:
+                c.showPage()
+                y = h - margin
+                c.setFont("Helvetica", 9)
+            c.drawString(margin + 10, y, line[:90])
+            y -= 12
+    y -= 40
+    if y < 120:
+        c.showPage()
+        y = h - margin
+    c.setFont("Helvetica", 10)
+    c.drawString(margin, y, "Authorized Signature: ____________________________    Date: ________________")
+    c.save()
+    buf.seek(0)
+    return send_file(buf, mimetype="application/pdf", download_name=f"proposal_{account.replace(' ','_')}.pdf")
+
+@app.route("/api/sales/renewals")
+def renewal_alerts():
+    db = get_db()
+    days = int(request.args.get("days", "60"))
+    today = datetime.now()
+    rows = db.execute("""SELECT c.contract_id, c.account_name, c.publication, c.contract_end,
+                          c.contract_start, c.status, c.agency_name, c.rep1
+                          FROM sm_contracts c
+                          WHERE c.status = 'ACTIVE' AND c.contract_end IS NOT NULL AND c.contract_end != ''
+                          ORDER BY c.contract_end
+                          LIMIT 500""").fetchall()
+    result = []
+    for r in rows:
+        row = dict(r)
+        end_str = row.get("contract_end") or ""
+        row["contract_end_iso"] = _parse_sm_date(end_str)
+        row["contract_start_iso"] = _parse_sm_date(row.get("contract_start") or "")
+        days_remaining = None
+        urgency = "ok"
+        try:
+            parts = end_str.split("/")
+            if len(parts) >= 3:
+                m, d = int(parts[0]), int(parts[1])
+                y = int(parts[2].split()[0])
+                y = y + 2000 if y < 100 else y
+                end_date = datetime(y, m, d)
+                days_remaining = (end_date - today).days
+                if days_remaining < 0:
+                    urgency = "expired"
+                elif days_remaining <= 30:
+                    urgency = "urgent"
+                elif days_remaining <= 60:
+                    urgency = "warning"
+        except (ValueError, IndexError):
+            continue
+        row["days_remaining"] = days_remaining
+        row["urgency"] = urgency
+        if days_remaining is not None and days_remaining <= days and days_remaining >= -90:
+            rev = db.execute("SELECT COALESCE(SUM(bill_cost),0) as total_revenue FROM sm_page_history WHERE contract_num = ? AND canceled = 0",
+                             (row["contract_id"],)).fetchone()
+            row["total_revenue"] = rev["total_revenue"]
+            result.append(row)
+    db.close()
+    return jsonify(result)
+
+@app.route("/api/reports/commissions")
+def report_commissions():
+    db = get_db()
+    year = request.args.get("year", str(datetime.now().year))
+    if len(year) == 4:
+        yr2 = year[2:]
+    else:
+        yr2 = year
+    rows = db.execute("""SELECT ph.rep1, ph.account_name, ph.publication, ph.issue_date,
+                          ph.bill_cost, ph.ad_cost, ph.net_cost, ph.type_ad,
+                          r.commission as commission_rate
+                          FROM sm_page_history ph
+                          LEFT JOIN sm_reps r ON ph.rep1 = r.rep_id
+                          WHERE ph.canceled = 0 AND ph.likelihood = 1
+                          AND ph.issue_date LIKE ?
+                          ORDER BY ph.rep1, ph.publication""",
+                      (f"%/{yr2} %",)).fetchall()
+    by_rep = {}
+    for r in rows:
+        row = dict(r)
+        rep = row["rep1"] or "Unassigned"
+        if rep not in by_rep:
+            by_rep[rep] = {"rep": rep, "commission_rate": row.get("commission_rate") or 0,
+                           "total_revenue": 0, "total_commission": 0, "insertion_count": 0}
+        amt = row.get("bill_cost") or 0
+        rate = row.get("commission_rate") or 0
+        by_rep[rep]["total_revenue"] += amt
+        by_rep[rep]["total_commission"] += amt * (rate / 100) if rate else 0
+        by_rep[rep]["insertion_count"] += 1
+    db.close()
+    return jsonify({"year": year, "reps": sorted(by_rep.values(), key=lambda x: -x["total_revenue"])})
+
+@app.route("/api/billing/transactions")
+def billing_transactions():
+    db = get_db()
+    invoice = request.args.get("invoice_num", "")
+    account = request.args.get("account", "")
+    page = int(request.args.get("page", "1"))
+    per_page = int(request.args.get("per_page", "50"))
+    where, params = [], []
+    if invoice:
+        where.append("t.invoice_num = ?")
+        params.append(invoice)
+    if account:
+        where.append("t.invoice_num IN (SELECT invoice_num FROM sm_page_history WHERE account_name = ?)")
+        params.append(account)
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+    total = db.execute(f"SELECT COUNT(*) FROM sm_transactions t {where_sql}", params).fetchone()[0]
+    rows = db.execute(f"""SELECT t.*, ph.account_name, ph.publication
+                          FROM sm_transactions t
+                          LEFT JOIN sm_page_history ph ON t.invoice_num = ph.invoice_num
+                          {where_sql}
+                          ORDER BY t.transaction_date DESC
+                          LIMIT ? OFFSET ?""",
+                      params + [per_page, (page - 1) * per_page]).fetchall()
+    db.close()
+    seen = set()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["transaction_date_iso"] = _parse_sm_date(d.get("transaction_date") or "")
+        key = d["trans_id"]
+        if key not in seen:
+            seen.add(key)
+            result.append(d)
+    return jsonify({"items": result, "total": total, "page": page})
+
+@app.route("/api/billing/credit-memos")
+def list_credit_memos():
+    db = get_db()
+    account = request.args.get("account", "")
+    where, params = [], []
+    if account:
+        where.append("account_name = ?")
+        params.append(account)
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+    rows = db.execute(f"SELECT * FROM credit_memos {where_sql} ORDER BY created_at DESC", params).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/billing/credit-memos", methods=["POST"])
+def create_credit_memo():
+    data = request.get_json()
+    db = get_db()
+    db.execute("""INSERT INTO credit_memos (account_name, amount, reason, invoice_num, created_by)
+                  VALUES (?, ?, ?, ?, ?)""",
+               (data["account_name"], data["amount"], data.get("reason", ""),
+                data.get("invoice_num", ""), "admin"))
+    db.commit()
+    log_audit(db, "create", "credit_memo", "", f"{data['account_name']} ${data['amount']}", "admin")
+    db.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/billing/credit-memos/<int:memo_id>", methods=["PUT"])
+def update_credit_memo(memo_id):
+    data = request.get_json()
+    db = get_db()
+    sets, vals = [], []
+    for k in ("amount", "reason", "status", "invoice_num"):
+        if k in data:
+            sets.append(f"{k} = ?")
+            vals.append(data[k])
+    if data.get("status") == "applied":
+        sets.append("applied_at = ?")
+        vals.append(datetime.now().isoformat())
+    vals.append(memo_id)
+    db.execute(f"UPDATE credit_memos SET {', '.join(sets)} WHERE id = ?", vals)
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/billing/export-csv")
+def billing_export_csv():
+    db = get_db()
+    year = request.args.get("year", "")
+    pub = request.args.get("publication", "")
+    where = ["canceled = 0", "invoice_num IS NOT NULL", "invoice_num != ''"]
+    params = []
+    if year:
+        yr2 = year[2:] if len(year) == 4 else year
+        where.append("issue_date LIKE ?")
+        params.append(f"%/{yr2} %")
+    if pub:
+        where.append("publication = ?")
+        params.append(pub)
+    rows = db.execute(f"""SELECT invoice_num, account_name, agency_name, bill_name,
+                          publication, type_ad, ad_size, issue_date, invoice_date,
+                          bill_cost, ad_cost, net_cost, discount, paid_date, rep1
+                          FROM sm_page_history
+                          WHERE {' AND '.join(where)}
+                          ORDER BY invoice_num""", params).fetchall()
+    db.close()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Invoice #", "Account", "Agency", "Bill To", "Publication",
+                     "Type", "Size", "Issue Date", "Invoice Date", "Bill Cost",
+                     "Ad Cost", "Net Cost", "Discount", "Paid Date", "Rep"])
+    for r in rows:
+        writer.writerow([r["invoice_num"], r["account_name"], r["agency_name"],
+                         r["bill_name"], r["publication"], r["type_ad"], r["ad_size"],
+                         _parse_sm_date(r["issue_date"] or ""),
+                         _parse_sm_date(r["invoice_date"] or ""),
+                         r["bill_cost"], r["ad_cost"], r["net_cost"],
+                         r["discount"], _parse_sm_date(r["paid_date"] or ""),
+                         r["rep1"]])
+    output.seek(0)
+    return Response(output.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename=billing_export_{year or 'all'}.csv"})
+
+@app.route("/api/reports/revenue-recognition")
+def report_revenue_recognition():
+    db = get_db()
+    year = request.args.get("year", str(datetime.now().year))
+    yr2 = year[2:] if len(year) == 4 else year
+    rows = db.execute("""SELECT publication, issue_date,
+                          SUM(CASE WHEN likelihood = 1 THEN bill_cost ELSE 0 END) as confirmed_revenue,
+                          SUM(CASE WHEN likelihood = 10 THEN bill_cost ELSE 0 END) as proposed_revenue,
+                          SUM(bill_cost) as total_revenue,
+                          COUNT(*) as insertion_count,
+                          SUM(CASE WHEN paid_date IS NOT NULL AND paid_date != '' THEN bill_cost ELSE 0 END) as collected,
+                          SUM(CASE WHEN invoice_num IS NOT NULL AND invoice_num != '' AND (paid_date IS NULL OR paid_date = '') THEN bill_cost ELSE 0 END) as outstanding
+                          FROM sm_page_history
+                          WHERE canceled = 0 AND issue_date LIKE ?
+                          GROUP BY publication, issue_date
+                          ORDER BY publication, issue_date""",
+                      (f"%/{yr2} %",)).fetchall()
+    result = []
+    for r in rows:
+        row = dict(r)
+        row["issue_date_iso"] = _parse_sm_date(row["issue_date"])
+        result.append(row)
+    db.close()
+    return jsonify(result)
+
+@app.route("/api/dashboard/kpis")
+def dashboard_kpis():
+    db = get_db()
+    now = datetime.now()
+    yr2 = str(now.year)[2:]
+    prev_yr2 = str(now.year - 1)[2:]
+    # Current year revenue
+    cur = db.execute("""SELECT SUM(bill_cost) as revenue, COUNT(*) as insertions
+                        FROM sm_page_history WHERE canceled = 0 AND likelihood = 1
+                        AND issue_date LIKE ?""", (f"%/{yr2} %",)).fetchone()
+    # Prior year revenue
+    prev = db.execute("""SELECT SUM(bill_cost) as revenue, COUNT(*) as insertions
+                         FROM sm_page_history WHERE canceled = 0 AND likelihood = 1
+                         AND issue_date LIKE ?""", (f"%/{prev_yr2} %",)).fetchone()
+    # Pipeline (proposals)
+    pipeline = db.execute("""SELECT SUM(bill_cost) as value, COUNT(*) as count
+                             FROM sm_page_history WHERE canceled = 0 AND likelihood = 10
+                             AND issue_date LIKE ?""", (f"%/{yr2} %",)).fetchone()
+    # Outstanding AR
+    ar = db.execute("""SELECT SUM(bill_cost) as outstanding
+                       FROM sm_page_history WHERE canceled = 0
+                       AND invoice_num IS NOT NULL AND invoice_num != ''
+                       AND (paid_date IS NULL OR paid_date = '')""").fetchone()
+    # Collection rate this year
+    billed = db.execute("""SELECT SUM(bill_cost) as total FROM sm_page_history
+                           WHERE canceled = 0 AND invoice_num IS NOT NULL AND invoice_num != ''
+                           AND issue_date LIKE ?""", (f"%/{yr2} %",)).fetchone()
+    collected = db.execute("""SELECT SUM(bill_cost) as total FROM sm_page_history
+                              WHERE canceled = 0 AND paid_date IS NOT NULL AND paid_date != ''
+                              AND issue_date LIKE ?""", (f"%/{yr2} %",)).fetchone()
+    billed_val = billed["total"] or 0
+    collected_val = collected["total"] or 0
+    # Renewal alerts count
+    renewals = db.execute("""SELECT COUNT(*) as cnt FROM sm_contracts
+                             WHERE status = 'ACTIVE'""").fetchone()
+    # Active accounts this year
+    active = db.execute("""SELECT COUNT(DISTINCT account_name) as cnt
+                           FROM sm_page_history WHERE canceled = 0 AND likelihood = 1
+                           AND issue_date LIKE ?""", (f"%/{yr2} %",)).fetchone()
+    db.close()
+    return jsonify({
+        "current_year": now.year,
+        "ytd_revenue": cur["revenue"] or 0,
+        "ytd_insertions": cur["insertions"] or 0,
+        "prior_year_revenue": prev["revenue"] or 0,
+        "prior_year_insertions": prev["insertions"] or 0,
+        "yoy_change": ((cur["revenue"] or 0) - (prev["revenue"] or 0)) / (prev["revenue"] or 1) * 100,
+        "pipeline_value": pipeline["value"] or 0,
+        "pipeline_count": pipeline["count"] or 0,
+        "outstanding_ar": ar["outstanding"] or 0,
+        "collection_rate": (collected_val / billed_val * 100) if billed_val > 0 else 0,
+        "active_contracts": renewals["cnt"] or 0,
+        "active_accounts": active["cnt"] or 0
+    })
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json()
+    username = data.get("username", "")
+    password = data.get("password", "")
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    db = get_db()
+    user = db.execute("SELECT * FROM admin_users WHERE username = ? AND password_hash = ? AND active = 1",
+                      (username, pw_hash)).fetchone()
+    if not user:
+        db.close()
+        return jsonify({"error": "Invalid credentials"}), 401
+    db.execute("UPDATE admin_users SET last_login = ? WHERE id = ?",
+               (datetime.now().isoformat(), user["id"]))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "user": {"id": user["id"], "username": user["username"],
+                    "display_name": user["display_name"], "role": user["role"]}})
+
+@app.route("/api/auth/me")
+def auth_me():
+    return jsonify({"user": {"username": "admin", "display_name": "Administrator", "role": "admin"}})
 
 
 if __name__ == "__main__":
