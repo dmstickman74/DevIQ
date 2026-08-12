@@ -1156,35 +1156,38 @@ tbody tr.clickable { cursor: pointer; }
   </div>
 
   <div id="mergeAccountsView" style="display:none;">
-    <h2 style="margin-bottom:16px;">Merge Accounts</h2>
-    <div class="sales-panel" style="margin-bottom:16px;">
-      <p class="panel-desc">Find duplicate accounts and merge them into one. All contracts, insertions, contacts, notes, and categories from the duplicate will be reassigned to the primary account.</p>
-      <div style="display:flex;gap:12px;margin-bottom:16px;">
-        <button class="btn btn-green" onclick="findDuplicateAccounts()">Find Duplicates</button>
-        <span style="color:var(--text3);font-size:13px;align-self:center;">— or search manually —</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2>Merge Accounts</h2>
+      <button class="btn btn-green" onclick="findDuplicateAccounts()">Find Duplicates</button>
+    </div>
+    <p class="panel-desc" style="margin-bottom:12px;">Click any pair below to preview and merge. The account with more revenue is pre-selected as primary. You can also search manually to merge any two accounts.</p>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr auto;margin-bottom:16px;">
+      <div class="form-group">
+        <label>Primary Account (keep)</label>
+        <input type="text" id="mergePrimary" placeholder="Search account name..." oninput="searchMergeAccounts('mergePrimary','mergePrimaryResults')">
+        <div id="mergePrimaryResults" class="merge-search-results"></div>
+        <input type="hidden" id="mergePrimaryId">
+        <div id="mergePrimaryBadge" class="merge-selected-badge"></div>
       </div>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr auto;">
-        <div class="form-group">
-          <label>Primary Account (keep)</label>
-          <input type="text" id="mergePrimary" placeholder="Search account name..." oninput="searchMergeAccounts('mergePrimary','mergePrimaryResults')">
-          <div id="mergePrimaryResults" class="merge-search-results"></div>
-          <input type="hidden" id="mergePrimaryId">
-          <div id="mergePrimaryBadge" class="merge-selected-badge"></div>
-        </div>
-        <div class="form-group">
-          <label>Duplicate Account (merge into primary)</label>
-          <input type="text" id="mergeDuplicate" placeholder="Search account name..." oninput="searchMergeAccounts('mergeDuplicate','mergeDuplicateResults')">
-          <div id="mergeDuplicateResults" class="merge-search-results"></div>
-          <input type="hidden" id="mergeDuplicateId">
-          <div id="mergeDuplicateBadge" class="merge-selected-badge"></div>
-        </div>
-        <div class="form-group" style="align-self:end;">
-          <button class="btn" onclick="previewMerge()">Preview Merge</button>
-        </div>
+      <div class="form-group">
+        <label>Duplicate Account (merge into primary)</label>
+        <input type="text" id="mergeDuplicate" placeholder="Search account name..." oninput="searchMergeAccounts('mergeDuplicate','mergeDuplicateResults')">
+        <div id="mergeDuplicateResults" class="merge-search-results"></div>
+        <input type="hidden" id="mergeDuplicateId">
+        <div id="mergeDuplicateBadge" class="merge-selected-badge"></div>
+      </div>
+      <div class="form-group" style="align-self:end;">
+        <button class="btn" onclick="previewMerge()">Preview Merge</button>
       </div>
     </div>
     <div id="mergeDuplicatesList"></div>
-    <div id="mergePreview"></div>
+  </div>
+
+  <!-- Merge Preview Modal -->
+  <div class="modal-overlay" id="mergePreviewModal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal" style="max-width:640px;">
+      <div id="mergePreviewContent"></div>
+    </div>
   </div>
 
   <!-- LIST VIEWS -->
@@ -6838,13 +6841,7 @@ async function findDuplicateAccounts() {
 }
 
 function loadDupPair(primaryId, primaryName, dupId, dupName) {
-  document.getElementById('mergePrimaryId').value = primaryId;
-  document.getElementById('mergePrimaryBadge').innerHTML = `<span class="badge-pill">${esc(primaryName)} <span class="badge-x" onclick="clearMergeAccount('mergePrimary')">&times;</span></span>`;
-  document.getElementById('mergePrimary').value = '';
-  document.getElementById('mergeDuplicateId').value = dupId;
-  document.getElementById('mergeDuplicateBadge').innerHTML = `<span class="badge-pill">${esc(dupName)} <span class="badge-x" onclick="clearMergeAccount('mergeDuplicate')">&times;</span></span>`;
-  document.getElementById('mergeDuplicate').value = '';
-  previewMerge();
+  showMergePreviewModal(primaryId, dupId);
 }
 
 async function previewMerge() {
@@ -6852,41 +6849,45 @@ async function previewMerge() {
   const duplicateId = document.getElementById('mergeDuplicateId').value;
   if (!primaryId || !duplicateId) { alert('Select both a primary and duplicate account.'); return; }
   if (primaryId === duplicateId) { alert('Primary and duplicate must be different accounts.'); return; }
+  showMergePreviewModal(parseInt(primaryId), parseInt(duplicateId));
+}
+
+async function showMergePreviewModal(primaryId, duplicateId) {
+  document.getElementById('mergePreviewContent').innerHTML = '<p style="color:var(--text3);padding:24px;">Loading preview...</p>';
+  document.getElementById('mergePreviewModal').classList.add('open');
   const data = await (await fetch('/api/sales/accounts/merge-preview', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({primary_id: parseInt(primaryId), duplicate_id: parseInt(duplicateId)})
+    body: JSON.stringify({primary_id: primaryId, duplicate_id: duplicateId})
   })).json();
-  if (data.error) { alert(data.error); return; }
+  if (data.error) { alert(data.error); document.getElementById('mergePreviewModal').classList.remove('open'); return; }
   const p = data.primary, d = data.duplicate;
-  document.getElementById('mergePreview').innerHTML = `
-    <div class="sales-panel">
-      <h3 style="margin-bottom:12px;">Merge Preview</h3>
-      <div class="merge-preview-grid">
-        <div class="merge-preview-card" style="border-color:var(--green);">
-          <h4 style="color:var(--green);">Keep: ${esc(p.name)}</h4>
-          <div class="mp-stat">${p.contracts} contracts</div>
-          <div class="mp-stat">${p.insertions} insertions</div>
-          <div class="mp-stat">${fmtMoney(p.revenue)} revenue</div>
-          <div class="mp-stat">${p.sm_contacts} SM contacts</div>
-          <div class="mp-stat">${p.notes} notes</div>
-          <div class="mp-stat">${p.categories} categories</div>
-          <div class="mp-stat">${p.credit_memos} credit memos</div>
-        </div>
-        <div class="merge-preview-card" style="border-color:#e74c3c;">
-          <h4 style="color:#e74c3c;">Delete: ${esc(d.name)}</h4>
-          <div class="mp-stat">${d.contracts} contracts &rarr; reassign</div>
-          <div class="mp-stat">${d.insertions} insertions &rarr; reassign</div>
-          <div class="mp-stat">${fmtMoney(d.revenue)} revenue &rarr; reassign</div>
-          <div class="mp-stat">${d.sm_contacts} SM contacts &rarr; reassign</div>
-          <div class="mp-stat">${d.notes} notes &rarr; reassign</div>
-          <div class="mp-stat">${d.categories} categories &rarr; merge</div>
-          <div class="mp-stat">${d.credit_memos} credit memos &rarr; reassign</div>
-        </div>
+  document.getElementById('mergePreviewContent').innerHTML = `
+    <h3 style="margin-bottom:16px;">Merge Preview</h3>
+    <div class="merge-preview-grid">
+      <div class="merge-preview-card" style="border-color:var(--green);">
+        <h4 style="color:var(--green);">Keep: ${esc(p.name)}</h4>
+        <div class="mp-stat">${p.contracts} contracts</div>
+        <div class="mp-stat">${p.insertions} insertions</div>
+        <div class="mp-stat">${fmtMoney(p.revenue)} revenue</div>
+        <div class="mp-stat">${p.sm_contacts} SM contacts</div>
+        <div class="mp-stat">${p.notes} notes</div>
+        <div class="mp-stat">${p.categories} categories</div>
+        <div class="mp-stat">${p.credit_memos} credit memos</div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn" onclick="document.getElementById('mergePreview').innerHTML=''">Cancel</button>
-        <button class="btn btn-danger" onclick="executeMerge(${p.id},${d.id},'${esc(p.name)}','${esc(d.name)}')">Merge &amp; Delete Duplicate</button>
+      <div class="merge-preview-card" style="border-color:#e74c3c;">
+        <h4 style="color:#e74c3c;">Delete: ${esc(d.name)}</h4>
+        <div class="mp-stat">${d.contracts} contracts &rarr; reassign</div>
+        <div class="mp-stat">${d.insertions} insertions &rarr; reassign</div>
+        <div class="mp-stat">${fmtMoney(d.revenue)} revenue &rarr; reassign</div>
+        <div class="mp-stat">${d.sm_contacts} SM contacts &rarr; reassign</div>
+        <div class="mp-stat">${d.notes} notes &rarr; reassign</div>
+        <div class="mp-stat">${d.categories} categories &rarr; merge</div>
+        <div class="mp-stat">${d.credit_memos} credit memos &rarr; reassign</div>
       </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('mergePreviewModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-danger" onclick="executeMerge(${p.id},${d.id},'${esc(p.name)}','${esc(d.name)}')">Merge &amp; Delete Duplicate</button>
     </div>`;
 }
 
@@ -6899,15 +6900,15 @@ async function executeMerge(primaryId, duplicateId, primaryName, dupName) {
   const data = await resp.json();
   if (data.ok) {
     const c = data.counts;
+    document.getElementById('mergePreviewModal').classList.remove('open');
     alert('Merge complete!\n\nReassigned to "' + data.primary + '":\n' +
       c.contracts + ' contracts\n' + c.insertions + ' insertions\n' +
       c.sm_contacts + ' contacts\n' + c.notes + ' notes\n' +
       c.categories + ' categories\n' + c.credit_memos + ' credit memos\n\n' +
       '"' + data.duplicate_deleted + '" has been deleted.');
-    document.getElementById('mergePreview').innerHTML = '';
     clearMergeAccount('mergePrimary');
     clearMergeAccount('mergeDuplicate');
-    document.getElementById('mergeDuplicatesList').innerHTML = '';
+    findDuplicateAccounts();
   } else {
     alert('Error: ' + (data.error || 'Unknown error'));
   }
