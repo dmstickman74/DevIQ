@@ -743,6 +743,24 @@ tbody tr.clickable { cursor: pointer; }
   outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,58,73,.1);
 }
 
+/* Merge Accounts */
+.merge-search-results { position:absolute; z-index:10; background:var(--surface,#fff); border:1px solid var(--border); border-radius:6px; max-height:200px; overflow-y:auto; width:100%; display:none; box-shadow:0 4px 12px rgba(0,0,0,.12); }
+.merge-search-results.open { display:block; }
+.merge-search-results .merge-result { padding:8px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid var(--border); }
+.merge-search-results .merge-result:hover { background:var(--cream); }
+.merge-search-results .merge-result .merge-result-sub { font-size:11px; color:var(--text3); }
+.merge-selected-badge { font-size:13px; margin-top:4px; }
+.merge-selected-badge .badge-pill { display:inline-flex; align-items:center; gap:6px; background:var(--cream); border:1px solid var(--border); border-radius:16px; padding:4px 12px; font-weight:600; }
+.merge-selected-badge .badge-pill .badge-x { cursor:pointer; color:var(--text3); font-weight:400; }
+.form-group { position: relative; }
+.merge-preview-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.merge-preview-card { background:var(--surface,#fff); border:1px solid var(--border); border-radius:8px; padding:16px; }
+.merge-preview-card h4 { margin:0 0 8px; font-size:14px; }
+.merge-preview-card .mp-stat { font-size:13px; color:var(--text2); margin-bottom:4px; }
+.merge-dup-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border:1px solid var(--border); border-radius:6px; margin-bottom:6px; background:var(--surface,#fff); }
+.merge-dup-row .dup-names { font-size:13px; }
+.merge-dup-row .dup-names strong { color:var(--teal); }
+
 /* Admin */
 .admin-layout { display: flex; gap: 0; min-height: calc(100vh - 120px); }
 .admin-sidebar {
@@ -836,6 +854,7 @@ tbody tr.clickable { cursor: pointer; }
         <a href="#" data-tab="pipeline" onclick="navFromDropdown('pipeline',event)">Pipeline</a>
         <a href="#" data-tab="reports" onclick="navFromDropdown('reports',event)">Reports</a>
         <a href="#" data-tab="renewals" onclick="navFromDropdown('renewals',event)">Renewals</a>
+        <a href="#" data-tab="mergeAccounts" onclick="navFromDropdown('mergeAccounts',event)">Merge Accounts</a>
         <a href="#" onclick="openProposalForAccount('');event.preventDefault();">New Proposal</a>
       </div>
     </div>
@@ -1134,6 +1153,38 @@ tbody tr.clickable { cursor: pointer; }
     </div>
     <div id="renewalsList"></div>
     <div id="revenueForecast" style="margin-top:32px;"></div>
+  </div>
+
+  <div id="mergeAccountsView" style="display:none;">
+    <h2 style="margin-bottom:16px;">Merge Accounts</h2>
+    <div class="sales-panel" style="margin-bottom:16px;">
+      <p class="panel-desc">Find duplicate accounts and merge them into one. All contracts, insertions, contacts, notes, and categories from the duplicate will be reassigned to the primary account.</p>
+      <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <button class="btn btn-green" onclick="findDuplicateAccounts()">Find Duplicates</button>
+        <span style="color:var(--text3);font-size:13px;align-self:center;">— or search manually —</span>
+      </div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr auto;">
+        <div class="form-group">
+          <label>Primary Account (keep)</label>
+          <input type="text" id="mergePrimary" placeholder="Search account name..." oninput="searchMergeAccounts('mergePrimary','mergePrimaryResults')">
+          <div id="mergePrimaryResults" class="merge-search-results"></div>
+          <input type="hidden" id="mergePrimaryId">
+          <div id="mergePrimaryBadge" class="merge-selected-badge"></div>
+        </div>
+        <div class="form-group">
+          <label>Duplicate Account (merge into primary)</label>
+          <input type="text" id="mergeDuplicate" placeholder="Search account name..." oninput="searchMergeAccounts('mergeDuplicate','mergeDuplicateResults')">
+          <div id="mergeDuplicateResults" class="merge-search-results"></div>
+          <input type="hidden" id="mergeDuplicateId">
+          <div id="mergeDuplicateBadge" class="merge-selected-badge"></div>
+        </div>
+        <div class="form-group" style="align-self:end;">
+          <button class="btn" onclick="previewMerge()">Preview Merge</button>
+        </div>
+      </div>
+    </div>
+    <div id="mergeDuplicatesList"></div>
+    <div id="mergePreview"></div>
   </div>
 
   <!-- LIST VIEWS -->
@@ -2193,6 +2244,11 @@ function showTab(tab) {
   document.getElementById('commissionsView').style.display = 'none';
   document.getElementById('revrecView').style.display = 'none';
   document.getElementById('renewalsView').style.display = 'none';
+  document.getElementById('mergeAccountsView').style.display = 'none';
+  if (tab === 'mergeAccounts') {
+    document.getElementById('mergeAccountsView').style.display = '';
+    return;
+  }
   if (tab === 'admin') {
     document.getElementById('adminView').style.display = '';
     initAdmin();
@@ -6718,6 +6774,151 @@ function exportRenewalsCSV() {
   if (pub) url += `&pub=${encodeURIComponent(pub)}`;
   window.open(url, '_blank');
 }
+
+// ══════════════════════════════════════
+// MERGE ACCOUNTS
+// ══════════════════════════════════════
+
+let mergeSearchTimer = null;
+async function searchMergeAccounts(inputId, resultsId) {
+  clearTimeout(mergeSearchTimer);
+  const q = document.getElementById(inputId).value.trim();
+  const resultsDiv = document.getElementById(resultsId);
+  if (q.length < 2) { resultsDiv.classList.remove('open'); return; }
+  mergeSearchTimer = setTimeout(async () => {
+    const data = await (await fetch('/api/sales/accounts/search-merge?q=' + encodeURIComponent(q))).json();
+    if (!data.length) { resultsDiv.innerHTML = '<div class="merge-result" style="color:var(--text3)">No matches</div>'; resultsDiv.classList.add('open'); return; }
+    resultsDiv.innerHTML = data.map(r => `
+      <div class="merge-result" onclick="selectMergeAccount('${inputId}','${resultsId}',${r.id},'${esc(r.company)}')">
+        <div>${esc(r.company)}</div>
+        <div class="merge-result-sub">${r.contracts} contracts &middot; ${r.insertions} insertions &middot; ${fmtMoney(r.revenue)}</div>
+      </div>
+    `).join('');
+    resultsDiv.classList.add('open');
+  }, 250);
+}
+
+function selectMergeAccount(inputId, resultsId, id, name) {
+  document.getElementById(inputId).value = '';
+  document.getElementById(resultsId).classList.remove('open');
+  const hiddenId = inputId + 'Id';
+  document.getElementById(hiddenId).value = id;
+  const badgeId = inputId + 'Badge';
+  document.getElementById(badgeId).innerHTML = `<span class="badge-pill">${esc(name)} <span class="badge-x" onclick="clearMergeAccount('${inputId}')">&times;</span></span>`;
+}
+
+function clearMergeAccount(inputId) {
+  document.getElementById(inputId + 'Id').value = '';
+  document.getElementById(inputId + 'Badge').innerHTML = '';
+}
+
+async function findDuplicateAccounts() {
+  const data = await (await fetch('/api/sales/accounts/find-duplicates')).json();
+  if (!data.length) { document.getElementById('mergeDuplicatesList').innerHTML = '<p style="color:var(--text3);">No potential duplicates found.</p>'; return; }
+  document.getElementById('mergeDuplicatesList').innerHTML = `
+    <div class="sales-panel">
+      <h3 style="margin-bottom:8px;">Potential Duplicates (${data.length} pairs)</h3>
+      <p class="panel-desc">Click a pair to load it into the merge tool above. The account with more revenue is pre-selected as primary.</p>
+      ${data.map(d => {
+        const aIsPrimary = (d.revenue_a || 0) >= (d.revenue_b || 0);
+        const primary = aIsPrimary ? {id: d.id_a, name: d.name_a, contracts: d.contracts_a, insertions: d.insertions_a, revenue: d.revenue_a}
+                                   : {id: d.id_b, name: d.name_b, contracts: d.contracts_b, insertions: d.insertions_b, revenue: d.revenue_b};
+        const dup = aIsPrimary ? {id: d.id_b, name: d.name_b, contracts: d.contracts_b, insertions: d.insertions_b, revenue: d.revenue_b}
+                               : {id: d.id_a, name: d.name_a, contracts: d.contracts_a, insertions: d.insertions_a, revenue: d.revenue_a};
+        return `<div class="merge-dup-row" style="cursor:pointer;" onclick="loadDupPair(${primary.id},'${esc(primary.name)}',${dup.id},'${esc(dup.name)}')">
+          <div class="dup-names">
+            <strong>${esc(primary.name)}</strong> (${primary.contracts}ct, ${primary.insertions}ins, ${fmtMoney(primary.revenue)})
+            <span style="color:var(--text3);margin:0 8px;">&larr; merge &larr;</span>
+            ${esc(dup.name)} (${dup.contracts}ct, ${dup.insertions}ins, ${fmtMoney(dup.revenue)})
+          </div>
+          <button class="btn btn-sm" onclick="event.stopPropagation();loadDupPair(${primary.id},'${esc(primary.name)}',${dup.id},'${esc(dup.name)}')">Select</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function loadDupPair(primaryId, primaryName, dupId, dupName) {
+  document.getElementById('mergePrimaryId').value = primaryId;
+  document.getElementById('mergePrimaryBadge').innerHTML = `<span class="badge-pill">${esc(primaryName)} <span class="badge-x" onclick="clearMergeAccount('mergePrimary')">&times;</span></span>`;
+  document.getElementById('mergePrimary').value = '';
+  document.getElementById('mergeDuplicateId').value = dupId;
+  document.getElementById('mergeDuplicateBadge').innerHTML = `<span class="badge-pill">${esc(dupName)} <span class="badge-x" onclick="clearMergeAccount('mergeDuplicate')">&times;</span></span>`;
+  document.getElementById('mergeDuplicate').value = '';
+  previewMerge();
+}
+
+async function previewMerge() {
+  const primaryId = document.getElementById('mergePrimaryId').value;
+  const duplicateId = document.getElementById('mergeDuplicateId').value;
+  if (!primaryId || !duplicateId) { alert('Select both a primary and duplicate account.'); return; }
+  if (primaryId === duplicateId) { alert('Primary and duplicate must be different accounts.'); return; }
+  const data = await (await fetch('/api/sales/accounts/merge-preview', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({primary_id: parseInt(primaryId), duplicate_id: parseInt(duplicateId)})
+  })).json();
+  if (data.error) { alert(data.error); return; }
+  const p = data.primary, d = data.duplicate;
+  document.getElementById('mergePreview').innerHTML = `
+    <div class="sales-panel">
+      <h3 style="margin-bottom:12px;">Merge Preview</h3>
+      <div class="merge-preview-grid">
+        <div class="merge-preview-card" style="border-color:var(--green);">
+          <h4 style="color:var(--green);">Keep: ${esc(p.name)}</h4>
+          <div class="mp-stat">${p.contracts} contracts</div>
+          <div class="mp-stat">${p.insertions} insertions</div>
+          <div class="mp-stat">${fmtMoney(p.revenue)} revenue</div>
+          <div class="mp-stat">${p.sm_contacts} SM contacts</div>
+          <div class="mp-stat">${p.notes} notes</div>
+          <div class="mp-stat">${p.categories} categories</div>
+          <div class="mp-stat">${p.credit_memos} credit memos</div>
+        </div>
+        <div class="merge-preview-card" style="border-color:#e74c3c;">
+          <h4 style="color:#e74c3c;">Delete: ${esc(d.name)}</h4>
+          <div class="mp-stat">${d.contracts} contracts &rarr; reassign</div>
+          <div class="mp-stat">${d.insertions} insertions &rarr; reassign</div>
+          <div class="mp-stat">${fmtMoney(d.revenue)} revenue &rarr; reassign</div>
+          <div class="mp-stat">${d.sm_contacts} SM contacts &rarr; reassign</div>
+          <div class="mp-stat">${d.notes} notes &rarr; reassign</div>
+          <div class="mp-stat">${d.categories} categories &rarr; merge</div>
+          <div class="mp-stat">${d.credit_memos} credit memos &rarr; reassign</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" onclick="document.getElementById('mergePreview').innerHTML=''">Cancel</button>
+        <button class="btn btn-danger" onclick="executeMerge(${p.id},${d.id},'${esc(p.name)}','${esc(d.name)}')">Merge &amp; Delete Duplicate</button>
+      </div>
+    </div>`;
+}
+
+async function executeMerge(primaryId, duplicateId, primaryName, dupName) {
+  if (!confirm('This will permanently merge "' + dupName + '" into "' + primaryName + '" and delete the duplicate. This cannot be undone. Continue?')) return;
+  const resp = await fetch('/api/sales/accounts/merge', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({primary_id: primaryId, duplicate_id: duplicateId})
+  });
+  const data = await resp.json();
+  if (data.ok) {
+    const c = data.counts;
+    alert('Merge complete!\n\nReassigned to "' + data.primary + '":\n' +
+      c.contracts + ' contracts\n' + c.insertions + ' insertions\n' +
+      c.sm_contacts + ' contacts\n' + c.notes + ' notes\n' +
+      c.categories + ' categories\n' + c.credit_memos + ' credit memos\n\n' +
+      '"' + data.duplicate_deleted + '" has been deleted.');
+    document.getElementById('mergePreview').innerHTML = '';
+    clearMergeAccount('mergePrimary');
+    clearMergeAccount('mergeDuplicate');
+    document.getElementById('mergeDuplicatesList').innerHTML = '';
+  } else {
+    alert('Error: ' + (data.error || 'Unknown error'));
+  }
+}
+
+// close merge search results when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.form-group')) {
+    document.querySelectorAll('.merge-search-results').forEach(d => d.classList.remove('open'));
+  }
+});
 
 // ══════════════════════════════════════
 // PROPOSAL GENERATOR

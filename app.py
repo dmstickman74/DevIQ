@@ -4303,6 +4303,141 @@ def renewal_alerts():
     return jsonify(result)
 
 
+@app.route("/api/sales/accounts/search-merge")
+def search_merge_accounts():
+    q = request.args.get("q", "").strip()
+    if len(q) < 2:
+        return jsonify([])
+    db = get_db()
+    rows = db.execute("""SELECT c.id, c.company,
+                         (SELECT COUNT(*) FROM sm_contracts WHERE account_name = c.company) as contracts,
+                         (SELECT COUNT(*) FROM sm_page_history WHERE account_name = c.company AND canceled = 0) as insertions,
+                         (SELECT COALESCE(SUM(bill_cost), 0) FROM sm_page_history WHERE account_name = c.company AND canceled = 0) as revenue
+                         FROM sm_companies c WHERE c.company LIKE ? ORDER BY c.company LIMIT 20""",
+                      (f"%{q}%",)).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/sales/accounts/find-duplicates")
+def find_duplicate_accounts():
+    import re
+    db = get_db()
+    companies = db.execute("SELECT id, company FROM sm_companies WHERE company != '' AND LENGTH(company) > 3 ORDER BY company").fetchall()
+    def normalize(name):
+        n = name.lower().strip()
+        n = re.sub(r'[,.\-\']', '', n)
+        for suffix in [' inc', ' llc', ' ltd', ' corp', ' co', ' company', ' corporation']:
+            if n.endswith(suffix):
+                n = n[:-len(suffix)]
+        return n.strip()
+    by_norm = {}
+    for row in companies:
+        key = normalize(row["company"])
+        if key:
+            by_norm.setdefault(key, []).append({"id": row["id"], "name": row["company"]})
+    pairs = []
+    for key, group in by_norm.items():
+        if len(group) >= 2:
+            for i in range(len(group)):
+                for j in range(i + 1, len(group)):
+                    if group[i]["name"] != group[j]["name"]:
+                        pairs.append((group[i], group[j]))
+    result = []
+    for a, b in pairs[:100]:
+        row = {"id_a": a["id"], "name_a": a["name"], "id_b": b["id"], "name_b": b["name"]}
+        for prefix, item in [("a", a), ("b", b)]:
+            stats = db.execute("""SELECT
+                (SELECT COUNT(*) FROM sm_contracts WHERE account_name = ?) as contracts,
+                (SELECT COUNT(*) FROM sm_page_history WHERE account_name = ? AND canceled = 0) as insertions,
+                (SELECT COALESCE(SUM(bill_cost),0) FROM sm_page_history WHERE account_name = ? AND canceled = 0) as revenue
+            """, (item["name"], item["name"], item["name"])).fetchone()
+            row[f"contracts_{prefix}"] = stats["contracts"]
+            row[f"insertions_{prefix}"] = stats["insertions"]
+            row[f"revenue_{prefix}"] = stats["revenue"]
+        result.append(row)
+    db.close()
+    return jsonify(result)
+
+
+@app.route("/api/sales/accounts/merge-preview", methods=["POST"])
+def merge_preview():
+    data = request.get_json()
+    primary_id = data.get("primary_id")
+    duplicate_id = data.get("duplicate_id")
+    if not primary_id or not duplicate_id:
+        return jsonify({"error": "primary_id and duplicate_id required"}), 400
+    db = get_db()
+    primary = db.execute("SELECT * FROM sm_companies WHERE id = ?", (primary_id,)).fetchone()
+    duplicate = db.execute("SELECT * FROM sm_companies WHERE id = ?", (duplicate_id,)).fetchone()
+    if not primary or not duplicate:
+        db.close()
+        return jsonify({"error": "account not found"}), 404
+    pname = primary["company"]
+    dname = duplicate["company"]
+    preview = {
+        "primary": {"id": primary_id, "name": pname},
+        "duplicate": {"id": duplicate_id, "name": dname},
+    }
+    for key, name in [("primary", pname), ("duplicate", dname)]:
+        stats = db.execute("""SELECT
+            (SELECT COUNT(*) FROM sm_contracts WHERE account_name = ?) as contracts,
+            (SELECT COUNT(*) FROM sm_page_history WHERE account_name = ? AND canceled = 0) as insertions,
+            (SELECT COALESCE(SUM(bill_cost),0) FROM sm_page_history WHERE account_name = ? AND canceled = 0) as revenue,
+            (SELECT COUNT(*) FROM sm_directory WHERE company = ?) as sm_contacts,
+            (SELECT COUNT(*) FROM sm_account_categories WHERE account_name = ?) as categories,
+            (SELECT COUNT(*) FROM notes WHERE entity_type = 'account' AND entity_id = (SELECT id FROM sm_companies WHERE company = ? LIMIT 1)) as notes,
+            (SELECT COUNT(*) FROM credit_memos WHERE account_name = ?) as credit_memos
+        """, (name, name, name, name, name, name, name)).fetchone()
+        preview[key].update(dict(stats))
+    db.close()
+    return jsonify(preview)
+
+
+@app.route("/api/sales/accounts/merge", methods=["POST"])
+def merge_accounts():
+    data = request.get_json()
+    primary_id = data.get("primary_id")
+    duplicate_id = data.get("duplicate_id")
+    if not primary_id or not duplicate_id or primary_id == duplicate_id:
+        return jsonify({"error": "valid primary_id and duplicate_id required"}), 400
+    db = get_db()
+    primary = db.execute("SELECT * FROM sm_companies WHERE id = ?", (primary_id,)).fetchone()
+    duplicate = db.execute("SELECT * FROM sm_companies WHERE id = ?", (duplicate_id,)).fetchone()
+    if not primary or not duplicate:
+        db.close()
+        return jsonify({"error": "account not found"}), 404
+    pname = primary["company"]
+    dname = duplicate["company"]
+    counts = {}
+    counts["contracts"] = db.execute("UPDATE sm_contracts SET account_name = ? WHERE account_name = ?", (pname, dname)).rowcount
+    counts["insertions"] = db.execute("UPDATE sm_page_history SET account_name = ? WHERE account_name = ?", (pname, dname)).rowcount
+    counts["sm_contacts"] = db.execute("UPDATE sm_directory SET company = ? WHERE company = ?", (pname, dname)).rowcount
+    db.execute("UPDATE sm_directory SET associated_company = ? WHERE associated_company = ?", (pname, dname))
+    counts["categories"] = db.execute("""INSERT OR IGNORE INTO sm_account_categories (account_name, product_category)
+                                         SELECT ?, product_category FROM sm_account_categories WHERE account_name = ?""",
+                                      (pname, dname)).rowcount
+    db.execute("DELETE FROM sm_account_categories WHERE account_name = ?", (dname,))
+    counts["credit_memos"] = db.execute("UPDATE credit_memos SET account_name = ? WHERE account_name = ?", (pname, dname)).rowcount
+    dup_notes = db.execute("SELECT id FROM notes WHERE entity_type = 'account' AND entity_id = ?", (str(duplicate_id),)).fetchall()
+    if dup_notes:
+        db.execute("UPDATE notes SET entity_id = ? WHERE entity_type = 'account' AND entity_id = ?",
+                   (str(primary_id), str(duplicate_id)))
+        counts["notes"] = len(dup_notes)
+    else:
+        counts["notes"] = 0
+    db.execute("UPDATE company_mapping SET sm_company_name = ? WHERE sm_company_name = ?", (pname, dname))
+    db.execute("INSERT INTO notes (entity_type, entity_id, content, created_by, activity_type) VALUES (?, ?, ?, ?, ?)",
+               ("account", str(primary_id), f"Merged duplicate account \"{dname}\" (ID {duplicate_id}) into this account.", "system", "note"))
+    db.execute("DELETE FROM sm_companies WHERE id = ?", (duplicate_id,))
+    counts["company_deleted"] = dname
+    _audit(db, "admin", "merge", "account", primary_id,
+           json.dumps({"merged_from": dname, "merged_from_id": duplicate_id, "counts": counts}))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "primary": pname, "duplicate_deleted": dname, "counts": counts})
+
+
 @app.route("/api/sales/renewals/csv")
 def renewals_csv():
     db = get_db()
