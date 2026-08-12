@@ -212,10 +212,17 @@ input, select { font-family: inherit; }
 /* Dashboard */
 .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .dash-header h2 { font-size: 22px; font-weight: 700; }
-.dash-stats { display: flex; gap: 24px; }
-.dash-stat { text-align: center; }
+.dash-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.dash-stat {
+  text-align: center; background: var(--surface); border-radius: var(--radius);
+  padding: 16px 20px; border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  flex: 1; min-width: 140px;
+}
 .dash-stat .val { font-size: 24px; font-weight: 700; color: var(--teal); }
-.dash-stat .lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+.dash-stat .lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+.dash-stat .trend { font-size: 11px; font-weight: 600; margin-top: 2px; }
+.dash-stat .trend.up { color: #166534; }
+.dash-stat .trend.down { color: var(--red); }
 .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .dash-card {
   background: var(--surface); border-radius: 10px; padding: 20px;
@@ -272,7 +279,23 @@ input, select { font-family: inherit; }
 .form-group input, .form-group select, .form-group textarea {
   width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
   font-size: 13px; background: var(--surface); color: var(--text); box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s;
 }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,58,73,.1);
+}
+.form-group.required label::after { content: ' *'; color: var(--red); font-weight: 700; }
+.form-group.invalid input, .form-group.invalid select, .form-group.invalid textarea {
+  border-color: var(--red); box-shadow: 0 0 0 3px rgba(192,57,43,.1);
+}
+.form-group .field-error { font-size: 11px; color: var(--red); margin-top: 3px; display: none; }
+.form-group.invalid .field-error { display: block; }
+.form-section-title {
+  font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase;
+  letter-spacing: .5px; padding-bottom: 6px; margin-bottom: 12px; margin-top: 8px;
+  border-bottom: 1px solid var(--border); grid-column: 1 / -1;
+}
+.form-group.full { grid-column: 1 / -1; }
 
 /* Layout */
 .container { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
@@ -371,6 +394,14 @@ input, select { font-family: inherit; }
 
 /* Table */
 .table-wrap { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.pipeline-section-body, .report-output, .admin-panel, .dash-card, #prodContent, #billingContent, #agingTable, #creditMemoList, #renewalsList, #pipelineContent { overflow-x: auto; }
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-stats { flex-direction: column; }
+  .filter-bar-top { flex-direction: column; }
+  .container { padding: 12px; }
+}
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {
   background: var(--teal); color: rgba(255,255,255,.9); padding: 10px 12px; text-align: left;
@@ -533,7 +564,17 @@ tbody tr.clickable { cursor: pointer; }
   border-radius: 6px; font-size: 14px; margin-bottom: 12px; font-family: inherit;
 }
 .modal textarea { resize: vertical; min-height: 60px; }
-.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-actions {
+  display: flex; gap: 8px; justify-content: flex-end; padding-top: 16px;
+  border-top: 1px solid var(--border); margin-top: 8px;
+}
+.empty-state {
+  text-align: center; padding: 48px 24px; color: var(--text2);
+}
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .5; }
+.empty-state h4 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; margin-bottom: 16px; max-width: 360px; margin-left: auto; margin-right: auto; }
+.empty-state .btn { font-size: 13px; }
 
 /* ──── Lists View ──── */
 .list-card {
@@ -1072,9 +1113,10 @@ tbody tr.clickable { cursor: pointer; }
 
   <!-- RENEWALS VIEW -->
   <div id="renewalsView" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <h2>Renewal Alerts</h2>
-      <div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="bulkRenewBtn" class="btn" style="display:none;" onclick="bulkRenewSelected()">Renew Selected (<span id="bulkRenewCount">0</span>)</button>
         <select id="renewalDays" class="btn" style="min-width:140px;">
           <option value="30">Next 30 Days</option>
           <option value="60" selected>Next 60 Days</option>
@@ -1084,7 +1126,14 @@ tbody tr.clickable { cursor: pointer; }
         <button class="btn btn-green" onclick="loadRenewals()">Refresh</button>
       </div>
     </div>
+    <div class="filter-bar-top" style="margin-bottom:12px;">
+      <input type="text" id="renewalSearch" placeholder="Search accounts..." style="min-width:180px;" oninput="loadRenewals()">
+      <select id="renewalRepFilter" onchange="loadRenewals()"><option value="">All Reps</option></select>
+      <select id="renewalPubFilter" onchange="loadRenewals()"><option value="">All Publications</option></select>
+      <button class="btn btn-sm" onclick="exportRenewalsCSV()" title="Export to CSV">Export CSV</button>
+    </div>
     <div id="renewalsList"></div>
+    <div id="revenueForecast" style="margin-top:32px;"></div>
   </div>
 
   <!-- LIST VIEWS -->
@@ -1152,6 +1201,7 @@ tbody tr.clickable { cursor: pointer; }
             <input class="search-input" id="companySearch" placeholder="Search companies by name or domain..." />
             <button class="search-clear" onclick="document.getElementById('companySearch').value='';document.getElementById('companySearch').dispatchEvent(new Event('input'));">&times;</button>
           </div>
+          <button class="btn" id="toggleCompanyFiltersBtn" onclick="toggleCompanyFilters()">&#9776; Filters</button>
           <div class="col-picker-wrap">
             <button class="btn" onclick="toggleColPicker('companies')">&#9783; Columns</button>
             <div class="col-picker-dropdown" id="companyColPicker">
@@ -1159,11 +1209,29 @@ tbody tr.clickable { cursor: pointer; }
               <div class="col-picker-list" id="companyColList"></div>
             </div>
           </div>
+          <select class="btn" id="companyPerPageSelect" style="appearance:auto;">
+            <option value="50">50 rows</option>
+            <option value="100">100 rows</option>
+            <option value="200">200 rows</option>
+          </select>
           <button class="btn btn-green" onclick="exportCSV('companies')">&#8615; Export CSV</button>
           <button class="btn btn-green" onclick="document.getElementById('createCompanyModal').classList.add('open')">+ New Company</button>
         </div>
+        <div class="advanced-filters" id="companyAdvancedFilters" style="display:none;">
+          <div id="companyFilterRows"></div>
+          <div class="filter-actions">
+            <button class="btn btn-sm" onclick="addCompanyFilterRow()">+ Add Filter</button>
+            <button class="btn btn-sm btn-primary" onclick="applyCompanyFilters()">Apply Filters</button>
+            <button class="btn btn-sm" onclick="clearCompanyFilters()">Clear All</button>
+            <button class="btn btn-sm" onclick="openSaveFilterModal('companies')">Save Filter</button>
+          </div>
+          <div class="saved-filters-bar" id="companySavedFiltersBar"></div>
+        </div>
       </div>
-      <div class="result-count" id="companiesResultCount"></div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="result-count" id="companiesResultCount"></div>
+        <button class="btn btn-green btn-sm" id="createListFromCompaniesBtn" style="display:none;" onclick="createListFromCompanyFilters()">+ Create List from Filter</button>
+      </div>
       <div class="table-wrap">
         <table>
           <thead id="companiesHead">
@@ -1248,6 +1316,16 @@ tbody tr.clickable { cursor: pointer; }
           </div>
           <select id="salesRepFilter" class="btn" style="min-width:100px;"><option value="">All Reps</option></select>
           <select id="salesPubFilter" class="btn" style="min-width:140px;"><option value="">All Publications</option></select>
+          <select id="salesCreditFilter" class="btn" style="min-width:120px;">
+            <option value="">All Credit</option>
+            <option value="hold">Credit Hold</option>
+            <option value="ok">Credit OK</option>
+          </select>
+          <select id="salesActivityFilter" class="btn" style="min-width:140px;">
+            <option value="">All Accounts</option>
+            <option value="active">Active (This Year)</option>
+            <option value="lapsed">Lapsed</option>
+          </select>
           <select id="salesSort" class="btn" style="min-width:130px;">
             <option value="company:asc">Name A–Z</option>
             <option value="company:desc">Name Z–A</option>
@@ -1255,6 +1333,7 @@ tbody tr.clickable { cursor: pointer; }
             <option value="insertions:desc">Insertions High–Low</option>
             <option value="last_issue:desc">Recent Activity</option>
           </select>
+          <button class="btn btn-sm" onclick="clearSalesFilters()" title="Clear all filters" style="display:none;" id="salesClearFiltersBtn">Clear Filters</button>
         </div>
       </div>
       <div id="salesResultCount" class="result-count"></div>
@@ -1551,27 +1630,40 @@ tbody tr.clickable { cursor: pointer; }
       <input type="hidden" id="ctModalId" />
       <input type="hidden" id="ctModalAccount" />
       <div class="form-grid">
-        <div class="form-group"><label>Publication</label><select id="ctPub" onchange="onCtPubChange()"><option value="">Select...</option></select></div>
-        <div class="form-group"><label>Ad Type</label><select id="ctType"><option value="">Select...</option></select></div>
+        <div class="form-section-title">Ad Details</div>
+        <div class="form-group required"><label>Publication</label><select id="ctPub" onchange="onCtPubChange()"><option value="">Select...</option></select><div class="field-error">Publication is required</div></div>
+        <div class="form-group required"><label>Ad Type</label><select id="ctType"><option value="">Select...</option></select><div class="field-error">Ad type is required</div></div>
         <div class="form-group"><label>Rate Card</label><select id="ctRateCard"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Rate</label><input id="ctRate" type="number" step="1" /></div>
-        <div class="form-group"><label>Contract Start</label><input id="ctStart" type="date" /></div>
-        <div class="form-group"><label>Contract End</label><input id="ctEnd" type="date" /></div>
+        <div class="form-section-title">Schedule</div>
+        <div class="form-group required"><label>Contract Start</label><input id="ctStart" type="date" /><div class="field-error">Start date is required</div></div>
+        <div class="form-group required"><label>Contract End</label><input id="ctEnd" type="date" /><div class="field-error">End date is required</div></div>
         <div class="form-group"><label>Status</label><select id="ctStatus"><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option><option value="Canceled">Canceled</option></select></div>
         <div class="form-group"><label>Terms</label><input id="ctTerms" /></div>
+        <div class="form-section-title">Billing</div>
         <div class="form-group"><label>Agency</label><input id="ctAgency" /></div>
         <div class="form-group"><label>Agency Discount (%)</label><input id="ctDiscount" type="number" step="1" min="0" max="100" /></div>
         <div class="form-group"><label>Bill To</label><select id="ctBill"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Credit Hold</label><select id="ctCreditHold"><option value="0">No</option><option value="1">Yes</option></select></div>
+        <div class="form-section-title">Sales Reps</div>
         <div class="form-group"><label>Rep 1</label><select id="ctRep1" onchange="autoFillTerritory('ctRep1','ctTerritory1')"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Territory 1</label><input id="ctTerritory1" readonly /></div>
         <div class="form-group"><label>Rep 2</label><select id="ctRep2" onchange="autoFillTerritory('ctRep2','ctTerritory2')"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Territory 2</label><input id="ctTerritory2" readonly /></div>
         <div class="form-group full"><label>Notes</label><textarea id="ctNotes" rows="3" style="resize:vertical;"></textarea></div>
+        <div class="form-group full" id="ctAutoGenWrap" style="display:none;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);">
+            <input type="checkbox" id="ctAutoGen" style="width:auto;accent-color:var(--green);" />
+            Auto-create insertions for matching issue dates
+          </label>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="ctAutoGenInfo"></div>
+        </div>
       </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="ctDeleteBtn" style="margin-right:auto;display:none;" onclick="deleteContract()">Delete</button>
+      <button class="btn" id="ctGenInsBtn" style="display:none;" onclick="generateInsertionsForContract()">Generate Insertions</button>
+      <button class="btn" id="ctRenewBtn" style="display:none;" onclick="renewContract()">Renew Contract</button>
       <button class="btn" onclick="document.getElementById('contractModal').classList.remove('open')">Cancel</button>
       <button class="btn btn-primary" onclick="saveContract()">Save Contract</button>
     </div>
@@ -1585,16 +1677,19 @@ tbody tr.clickable { cursor: pointer; }
       <input type="hidden" id="insModalId" />
       <input type="hidden" id="insModalAccount" />
       <div class="form-grid">
-        <div class="form-group"><label>Publication</label><select id="insPub" onchange="onInsPubChange()"><option value="">Select...</option></select></div>
-        <div class="form-group"><label>Issue Date</label><select id="insIssueDate"><option value="">Select...</option></select></div>
-        <div class="form-group"><label>Ad Type</label><select id="insType"><option value="">Select...</option></select></div>
-        <div class="form-group"><label>Ad Size</label><select id="insSize" onchange="lookupAdCost()"><option value="">Select...</option></select></div>
+        <div class="form-section-title">Ad Details</div>
+        <div class="form-group required"><label>Publication</label><select id="insPub" onchange="onInsPubChange()"><option value="">Select...</option></select><div class="field-error">Publication is required</div></div>
+        <div class="form-group required"><label>Issue Date</label><select id="insIssueDate"><option value="">Select...</option></select><div class="field-error">Issue date is required</div></div>
+        <div class="form-group required"><label>Ad Type</label><select id="insType"><option value="">Select...</option></select><div class="field-error">Ad type is required</div></div>
+        <div class="form-group required"><label>Ad Size</label><select id="insSize" onchange="lookupAdCost()"><option value="">Select...</option></select><div class="field-error">Ad size is required</div></div>
         <div class="form-group"><label>Color</label><select id="insColor" onchange="lookupAdCost()"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Category</label><select id="insCategory"><option value="">Select...</option></select></div>
+        <div class="form-section-title">Pricing</div>
         <div class="form-group"><label>Ad Cost ($)</label><input id="insCost" type="number" step="0.01" /></div>
         <div class="form-group"><label>Net Cost ($)</label><input id="insNet" type="number" step="0.01" /></div>
         <div class="form-group"><label>Gross Cost ($)</label><input id="insGross" type="number" step="0.01" /></div>
         <div class="form-group"><label>Contract #</label><input id="insContract" /></div>
+        <div class="form-section-title">Sales & Placement</div>
         <div class="form-group"><label>Rep 1</label><select id="insRep1" onchange="autoFillTerritory('insRep1','insTerritory1')"><option value="">Select...</option></select></div>
         <div class="form-group"><label>Territory 1</label><input id="insTerritory1" readonly /></div>
         <div class="form-group full"><label>Headline</label><input id="insHeadline" /></div>
@@ -1738,14 +1833,35 @@ tbody tr.clickable { cursor: pointer; }
     <div class="modal-body">
       <input type="text" id="lbName" placeholder="List name..." />
       <textarea id="lbDesc" placeholder="Description (optional)..."></textarea>
-      <div class="list-builder-section">
-        <h4>Conditions <span style="font-weight:400;text-transform:none;color:var(--text3);">— contacts must match ALL of the following</span></h4>
-        <div id="lbRows"></div>
-        <button class="btn btn-sm" onclick="lbAddRow()" style="margin-top:4px;">+ Add Condition</button>
+      <div style="display:flex;gap:12px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <label style="font-size:12px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;">TARGET</label>
+          <select id="lbTargetSelect" class="btn" style="width:100%;appearance:auto;" onchange="lbTarget=this.value;lbRenderRows();lbRefreshPreview();">
+            <option value="contacts">Contacts</option>
+            <option value="companies">Companies</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:12px;font-weight:600;color:var(--text3);display:block;margin-bottom:4px;">LIST TYPE</label>
+          <select id="lbTypeSelect" class="btn" style="width:100%;appearance:auto;" onchange="lbListType=this.value;lbUpdateTypeUI();lbRefreshPreview();">
+            <option value="dynamic">Dynamic (auto-updates)</option>
+            <option value="static">Static (snapshot)</option>
+          </select>
+        </div>
+      </div>
+      <div id="lbFiltersSection">
+        <div class="list-builder-section">
+          <h4>Conditions <span style="font-weight:400;text-transform:none;color:var(--text3);" id="lbCondLabel">— records must match ALL of the following</span></h4>
+          <div id="lbRows"></div>
+          <button class="btn btn-sm" onclick="lbAddRow()" style="margin-top:4px;">+ Add Condition</button>
+        </div>
+      </div>
+      <div id="lbStaticInfo" style="display:none;padding:16px;background:var(--surface);border-radius:8px;color:var(--text2);font-size:13px;">
+        This is a static list — it captures a fixed snapshot of IDs at creation time. Edit the list to change its type to dynamic.
       </div>
       <div class="lb-preview">
         <div class="lb-preview-count" id="lbPreviewCount">—</div>
-        <div class="lb-preview-label">contacts match these criteria</div>
+        <div class="lb-preview-label">records match these criteria</div>
         <button class="btn btn-sm" onclick="lbRefreshPreview()" style="margin-left:auto;">Refresh Count</button>
       </div>
     </div>
@@ -1901,6 +2017,20 @@ tbody tr.clickable { cursor: pointer; }
   </div>
 </div>
 
+<!-- Renewal Email Modal -->
+<div class="modal-overlay" id="renewalEmailModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:600px;">
+    <h3>Send Renewal Email — <span id="renewalEmailAccount"></span></h3>
+    <div class="form-group"><label>To</label><input type="email" id="renewalEmailTo" placeholder="recipient@example.com"></div>
+    <div class="form-group"><label>Subject</label><input type="text" id="renewalEmailSubject"></div>
+    <div class="form-group"><label>Message</label><textarea id="renewalEmailBody" rows="10" style="font-size:13px;line-height:1.5;"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('renewalEmailModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-green" onclick="sendRenewalEmailDraft()">Open in Email Client</button>
+    </div>
+  </div>
+</div>
+
 <!-- Edit Contact Modal -->
 <div class="modal-overlay" id="editContactModal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal" style="max-width:560px;">
@@ -1955,6 +2085,7 @@ let state = {
   companies: { page: 1, search: '', per_page: 50 },
   activeTab: 'contacts',
   filters: [],
+  companyFilters: [],
   contactFields: [],
   companyFields: [],
   saveMode: 'filter',
@@ -1999,6 +2130,7 @@ async function init() {
   loadDashboard();
   await Promise.all([loadContactFields(), loadCompanyFields()]);
   loadSavedFilters();
+  loadCompanySavedFilters();
 }
 
 // TABS
@@ -2314,12 +2446,112 @@ function loadSavedFilter(filters) {
 async function deleteSavedFilter(id) {
   await fetch(`/api/saved-filters/${id}`, { method: 'DELETE' });
   loadSavedFilters();
+  loadCompanySavedFilters();
+}
+
+// ══════════════════════════════════════
+// COMPANY FILTERS
+// ══════════════════════════════════════
+function toggleCompanyFilters() {
+  const el = document.getElementById('companyAdvancedFilters');
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? '' : 'none';
+  if (isHidden && state.companyFilters.length === 0) addCompanyFilterRow();
+}
+
+function addCompanyFilterRow() {
+  state.companyFilters.push({ field: '', op: 'contains', value: '' });
+  renderCompanyFilterRows();
+}
+
+function removeCompanyFilterRow(i) {
+  state.companyFilters.splice(i, 1);
+  renderCompanyFilterRows();
+}
+
+function renderCompanyFilterRows() {
+  const container = document.getElementById('companyFilterRows');
+  container.innerHTML = state.companyFilters.map((f, i) => `
+    <div class="filter-row">
+      <select onchange="state.companyFilters[${i}].field=this.value">
+        <option value="">Select field...</option>
+        ${state.companyFields.map(field =>
+          `<option value="${field}" ${f.field === field ? 'selected' : ''}>${formatLabel(field)}</option>`
+        ).join('')}
+      </select>
+      <select onchange="state.companyFilters[${i}].op=this.value">
+        <option value="contains" ${f.op==='contains'?'selected':''}>contains</option>
+        <option value="equals" ${f.op==='equals'?'selected':''}>equals</option>
+        <option value="not_equals" ${f.op==='not_equals'?'selected':''}>does not equal</option>
+        <option value="not_contains" ${f.op==='not_contains'?'selected':''}>does not contain</option>
+        <option value="starts_with" ${f.op==='starts_with'?'selected':''}>starts with</option>
+        <option value="is_not_empty" ${f.op==='is_not_empty'?'selected':''}>is not empty</option>
+        <option value="is_empty" ${f.op==='is_empty'?'selected':''}>is empty</option>
+      </select>
+      <input class="filter-value" value="${esc(f.value)}" placeholder="Value..."
+             oninput="state.companyFilters[${i}].value=this.value"
+             onkeydown="if(event.key==='Enter')applyCompanyFilters()"
+             ${f.op==='is_empty'||f.op==='is_not_empty'?'disabled style="opacity:.4"':''} />
+      <button class="remove-filter" onclick="removeCompanyFilterRow(${i})">&times;</button>
+    </div>
+  `).join('');
+}
+
+function applyCompanyFilters() {
+  state.companies.page = 1;
+  loadCompanies();
+  updateCreateListFromCompaniesBtn();
+}
+
+function clearCompanyFilters() {
+  state.companyFilters = [];
+  renderCompanyFilterRows();
+  state.companies.page = 1;
+  loadCompanies();
+  updateCreateListFromCompaniesBtn();
+}
+
+function getActiveCompanyFilters() {
+  return state.companyFilters.filter(f => f.field && (f.op === 'is_empty' || f.op === 'is_not_empty' || f.value));
+}
+
+function updateCreateListFromCompaniesBtn() {
+  const btn = document.getElementById('createListFromCompaniesBtn');
+  btn.style.display = getActiveCompanyFilters().length > 0 ? '' : 'none';
+}
+
+async function loadCompanySavedFilters() {
+  const filters = await (await fetch('/api/saved-filters?target=companies')).json();
+  const bar = document.getElementById('companySavedFiltersBar');
+  if (!filters.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = '<span style="font-size:12px;color:var(--text3);font-weight:600;">SAVED:</span> ' +
+    filters.map(f => `
+      <span class="saved-filter-chip" onclick="loadCompanySavedFilter(${JSON.stringify(f.filters).replace(/"/g,'&quot;')})">
+        ${esc(f.name)}
+        <span class="delete-chip" onclick="event.stopPropagation();deleteSavedFilter(${f.id})">&times;</span>
+      </span>
+    `).join('');
+}
+
+function loadCompanySavedFilter(filters) {
+  state.companyFilters = JSON.parse(JSON.stringify(filters));
+  document.getElementById('companyAdvancedFilters').style.display = '';
+  renderCompanyFilterRows();
+  applyCompanyFilters();
+}
+
+function createListFromCompanyFilters() {
+  const filters = getActiveCompanyFilters();
+  if (!filters.length) { alert('Apply filters first.'); return; }
+  openListBuilder(null, null, 'companies', filters);
 }
 
 // ══════════════════════════════════════
 // SAVE FILTER MODAL (simple, per-user)
 // ══════════════════════════════════════
-function openSaveFilterModal() {
+let saveFilterTarget = 'contacts';
+function openSaveFilterModal(target) {
+  saveFilterTarget = target || 'contacts';
   document.getElementById('filterSaveName').value = '';
   document.getElementById('saveFilterModal').classList.add('open');
   document.getElementById('filterSaveName').focus();
@@ -2330,14 +2562,15 @@ function closeSaveFilterModal() {
 async function doSaveFilter() {
   const name = document.getElementById('filterSaveName').value.trim();
   if (!name) return;
-  const active = getActiveFilters();
+  const active = saveFilterTarget === 'companies' ? getActiveCompanyFilters() : getActiveFilters();
   if (!active.length) { alert('Add at least one filter first.'); return; }
   await fetch('/api/saved-filters', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ name, target: 'contacts', filters: active })
+    body: JSON.stringify({ name, target: saveFilterTarget, filters: active })
   });
   closeSaveFilterModal();
-  loadSavedFilters();
+  if (saveFilterTarget === 'companies') loadCompanySavedFilters();
+  else loadSavedFilters();
 }
 
 // ══════════════════════════════════════
@@ -2346,6 +2579,9 @@ async function doSaveFilter() {
 let lbConditions = [];
 let lbEditingId = null;
 let lbPreviewTimeout = null;
+let lbTarget = 'contacts';
+let lbListType = 'dynamic';
+let lbStaticIds = [];
 
 const LB_OPERATORS = [
   { value: 'equals', label: 'equals' },
@@ -2359,12 +2595,18 @@ const LB_OPERATORS = [
   { value: 'is_empty', label: 'is empty' },
 ];
 
-function openListBuilder(editId, existingData) {
+function openListBuilder(editId, existingData, target, prefillFilters) {
   lbEditingId = editId || null;
   lbConditions = [];
+  lbTarget = target || (existingData && existingData.target) || 'contacts';
+  lbListType = (existingData && existingData.list_type) || 'dynamic';
+  lbStaticIds = (existingData && existingData.static_ids) || [];
   document.getElementById('lbName').value = '';
   document.getElementById('lbDesc').value = '';
   document.getElementById('lbPreviewCount').textContent = '—';
+  document.getElementById('lbTargetSelect').value = lbTarget;
+  document.getElementById('lbTypeSelect').value = lbListType;
+  lbUpdateTypeUI();
 
   if (existingData) {
     document.getElementById('listBuilderTitle').textContent = 'Edit Marketing List';
@@ -2386,11 +2628,23 @@ function openListBuilder(editId, existingData) {
     document.getElementById('lbSaveBtn').textContent = 'Create List';
   }
 
+  if (prefillFilters && prefillFilters.length) {
+    lbConditions = prefillFilters.map(f => ({
+      field: f.field || '', op: f.op || 'contains', value: f.value || '', tags: []
+    }));
+  }
+
   if (lbConditions.length === 0) lbConditions.push({ field: '', op: 'equals', value: '', tags: [] });
   lbRenderRows();
   document.getElementById('listBuilderModal').classList.add('open');
   document.getElementById('lbName').focus();
   lbRefreshPreview();
+}
+
+function lbUpdateTypeUI() {
+  const isDynamic = lbListType === 'dynamic';
+  document.getElementById('lbFiltersSection').style.display = isDynamic ? '' : 'none';
+  document.getElementById('lbStaticInfo').style.display = isDynamic ? 'none' : '';
 }
 
 function closeListBuilder() {
@@ -2414,7 +2668,8 @@ function lbIsNoValue(op) { return op === 'is_empty' || op === 'is_not_empty'; }
 function lbRenderRows() {
   const container = document.getElementById('lbRows');
   container.innerHTML = lbConditions.map((c, i) => {
-    const fieldOpts = state.contactFields.map(f =>
+    const fields = lbTarget === 'companies' ? state.companyFields : state.contactFields;
+    const fieldOpts = fields.map(f =>
       `<option value="${f}" ${c.field === f ? 'selected' : ''}>${formatLabel(f)}</option>`
     ).join('');
     const opOpts = LB_OPERATORS.map(o =>
@@ -2516,11 +2771,15 @@ function lbSchedulePreview() {
 }
 
 async function lbRefreshPreview() {
+  if (lbListType === 'static') {
+    document.getElementById('lbPreviewCount').textContent = lbStaticIds.length.toLocaleString();
+    return;
+  }
   const conditions = lbGetActiveConditions();
   document.getElementById('lbPreviewCount').textContent = '...';
   const res = await fetch('/api/lists/preview', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ filters: conditions })
+    body: JSON.stringify({ filters: conditions, target: lbTarget })
   });
   const d = await res.json();
   document.getElementById('lbPreviewCount').textContent = d.count.toLocaleString();
@@ -2531,16 +2790,18 @@ async function lbSave() {
   if (!name) { alert('Enter a list name.'); return; }
   const desc = document.getElementById('lbDesc').value.trim();
   const conditions = lbGetActiveConditions();
+  const payload = { name, description: desc, target: lbTarget, list_type: lbListType, filters: conditions };
+  if (lbListType === 'static') payload.static_ids = lbStaticIds;
 
   if (lbEditingId) {
     await fetch(`/api/lists/${lbEditingId}`, {
       method: 'PUT', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, description: desc, filters: conditions })
+      body: JSON.stringify(payload)
     });
   } else {
     await fetch('/api/lists', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, description: desc, target: 'contacts', filters: conditions })
+      body: JSON.stringify(payload)
     });
   }
   closeListBuilder();
@@ -2558,6 +2819,8 @@ function exportCSV(type) {
     if (active.length) params.set('filters', JSON.stringify(active));
   } else {
     if (state.companies.search) params.set('search', state.companies.search);
+    const compActive = getActiveCompanyFilters();
+    if (compActive.length) params.set('filters', JSON.stringify(compActive));
   }
   window.open(`/api/${type}/export?${params}`, '_blank');
 }
@@ -2615,7 +2878,7 @@ function renderContacts(data) {
   const cols = getContactCols();
   const tbody = document.getElementById('contactsBody');
   if (!data.contacts.length) {
-    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:40px;color:var(--text2);">No contacts match your filters</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${cols.length}"><div class="empty-state"><div class="empty-icon">&#128100;</div><h4>No contacts found</h4><p>Try adjusting your search or filters to find what you're looking for.</p></div></td></tr>`;
   } else {
     const bulkOn = document.getElementById('bulkBar').classList.contains('active');
     tbody.innerHTML = data.contacts.map(c => {
@@ -2667,8 +2930,11 @@ document.getElementById('perPageSelect').addEventListener('change', e => {
 async function loadCompanies() {
   const s = state.companies;
   const params = new URLSearchParams({ page: s.page, per_page: s.per_page, search: s.search });
+  const active = getActiveCompanyFilters();
+  if (active.length) params.set('filters', JSON.stringify(active));
   const d = await (await fetch('/api/companies?' + params)).json();
   renderCompanies(d);
+  updateCreateListFromCompaniesBtn();
 }
 
 function renderCompaniesHeader() {
@@ -2687,7 +2953,7 @@ function renderCompanies(data) {
   const cols = getCompanyCols();
   const tbody = document.getElementById('companiesBody');
   if (!data.companies.length) {
-    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:40px;color:var(--text2);">No companies found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${cols.length}"><div class="empty-state"><div class="empty-icon">&#127970;</div><h4>No companies found</h4><p>Try adjusting your search or filters to find what you're looking for.</p></div></td></tr>`;
   } else {
     tbody.innerHTML = data.companies.map(c => `
       <tr class="clickable" onclick="openCompany('${c.id}')">` +
@@ -2716,6 +2982,12 @@ document.getElementById('companySearch').addEventListener('input', e => {
     state.companies.page = 1;
     loadCompanies();
   }, 300);
+});
+
+document.getElementById('companyPerPageSelect').addEventListener('change', e => {
+  state.companies.per_page = parseInt(e.target.value);
+  state.companies.page = 1;
+  loadCompanies();
 });
 
 // ══════════════════════════════════════
@@ -2779,18 +3051,26 @@ function renderLists() {
     }).join(' ');
     const created = l.created_at ? new Date(l.created_at).toLocaleDateString() : '';
     const by = l.created_by || 'admin';
+    const listType = l.list_type || 'dynamic';
+    const targetLabel = (l.target || 'contacts');
+    const typeBadge = listType === 'static'
+      ? '<span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:#e8e8e8;color:#555;margin-left:6px;">Static</span>'
+      : '<span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:#e0f5d0;color:#2a7a0a;margin-left:6px;">Dynamic</span>';
+    const targetBadge = targetLabel === 'companies'
+      ? '<span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:#dbeafe;color:#1e40af;margin-left:4px;">Companies</span>'
+      : '<span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:#fef3c7;color:#92400e;margin-left:4px;">Contacts</span>';
     return `
     <div class="list-card" onclick="openListDetail(${l.id})">
       <div class="list-icon">&#9776;</div>
       <div class="list-info">
-        <h3>${esc(l.name)}</h3>
+        <h3>${esc(l.name)}${typeBadge}${targetBadge}</h3>
         <p>${esc(l.description || '')}</p>
-        <div style="margin-top:6px;">${filterSummary || '<span style="font-size:12px;color:var(--text3);">No criteria (all contacts)</span>'}</div>
+        <div style="margin-top:6px;">${filterSummary || '<span style="font-size:12px;color:var(--text3);">No criteria</span>'}</div>
         <div style="margin-top:4px;font-size:11px;color:var(--text3);">Created ${created} by ${esc(by)}</div>
       </div>
       <div style="text-align:center;margin-right:12px;">
         <div class="list-count">${l.count.toLocaleString()}</div>
-        <div class="list-count-label">contacts</div>
+        <div class="list-count-label">${targetLabel}</div>
       </div>
       <div class="list-actions" onclick="event.stopPropagation();">
         <button class="btn btn-sm" onclick="editListById(${l.id})">Edit</button>
@@ -3259,6 +3539,8 @@ async function initSales() {
     });
     document.getElementById('salesRepFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
     document.getElementById('salesPubFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
+    document.getElementById('salesCreditFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
+    document.getElementById('salesActivityFilter').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
     document.getElementById('salesSort').addEventListener('change', () => { salesPage = 1; loadSalesAccounts(); });
     renderSalesDashboard(summary);
   }
@@ -3296,18 +3578,40 @@ function fmtSmDate(d) {
   return m[1] + '/' + yr;
 }
 
+function clearSalesFilters() {
+  document.getElementById('salesSearch').value = '';
+  document.getElementById('salesRepFilter').value = '';
+  document.getElementById('salesPubFilter').value = '';
+  document.getElementById('salesCreditFilter').value = '';
+  document.getElementById('salesActivityFilter').value = '';
+  salesPage = 1;
+  loadSalesAccounts();
+}
+
+function updateSalesClearBtn() {
+  const hasFilter = document.getElementById('salesSearch').value.trim() ||
+    document.getElementById('salesRepFilter').value ||
+    document.getElementById('salesPubFilter').value ||
+    document.getElementById('salesCreditFilter').value ||
+    document.getElementById('salesActivityFilter').value;
+  document.getElementById('salesClearFiltersBtn').style.display = hasFilter ? '' : 'none';
+}
+
 async function loadSalesAccounts() {
   const q = document.getElementById('salesSearch').value.trim();
   const rep = document.getElementById('salesRepFilter').value;
   const pub = document.getElementById('salesPubFilter').value;
+  const credit = document.getElementById('salesCreditFilter').value;
+  const activity = document.getElementById('salesActivityFilter').value;
   const sv = document.getElementById('salesSort').value.split(':');
+  updateSalesClearBtn();
   const params = new URLSearchParams({
-    page: salesPage, per_page: 50, q, rep, pub, sort: sv[0], order: sv[1]
+    page: salesPage, per_page: 50, q, rep, pub, credit, activity, sort: sv[0], order: sv[1]
   });
   const d = await (await fetch('/api/sales/accounts?' + params)).json();
   document.getElementById('salesResultCount').textContent = `${d.total.toLocaleString()} accounts`;
 
-  document.getElementById('salesBody').innerHTML = d.accounts.map(a => `
+  document.getElementById('salesBody').innerHTML = d.accounts.length ? d.accounts.map(a => `
     <tr class="clickable" onclick="openSalesDetail(${a.id})">
       <td><span class="contact-name">${esc(a.company)}</span></td>
       <td>${a.contact_count}</td>
@@ -3317,7 +3621,7 @@ async function loadSalesAccounts() {
       <td style="white-space:nowrap;">${fmtSmDate(a.last_issue_date)}</td>
       <td>${a.credit_hold ? '<span class="credit-hold-badge">HOLD</span>' : '<span class="credit-ok-badge">OK</span>'}${a.hubspot_company_id ? ' <span class="hs-linked-badge">HS</span>' : ''}</td>
     </tr>
-  `).join('');
+  `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">&#128188;</div><h4>No accounts found</h4><p>Try adjusting your search or filters.</p></div></td></tr>`;
 
   const pag = document.getElementById('salesPagination');
   const start = ((d.page-1)*d.per_page)+1;
@@ -3426,11 +3730,19 @@ async function openSalesDetail(id) {
         </table>
       </div>
       <div class="sales-panel" style="margin-top:16px;">
-        <h3 style="margin-bottom:8px;">Notes</h3>
+        <h3 style="margin-bottom:8px;">Activity Log</h3>
         <div id="accountNotes_${id}"></div>
         <div class="note-input">
-          <textarea id="accountNotes_${id}_input" placeholder="Add a note about this account..."></textarea>
-          <button class="btn btn-green btn-sm" onclick="addNote('account','${id}','accountNotes_${id}')" style="align-self:flex-end;">Save</button>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <select id="accountNotes_${id}_type" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
+              <option value="note">Note</option>
+              <option value="call">Call</option>
+              <option value="email">Email</option>
+              <option value="meeting">Meeting</option>
+            </select>
+          </div>
+          <textarea id="accountNotes_${id}_input" placeholder="Log a call, email, meeting, or note..."></textarea>
+          <button class="btn btn-green btn-sm" onclick="addActivity('account','${id}','accountNotes_${id}')" style="align-self:flex-end;">Save</button>
         </div>
       </div>
     </div>
@@ -3597,6 +3909,7 @@ async function loadAccountContracts() {
         <th class="${ctSort.col==='contract_end'?'sortable sorted':'sortable'}" onclick="sortCtCol('contract_end')">End<span class="sort-arrow">${ctSort.col==='contract_end'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
         <th class="${ctSort.col==='status'?'sortable sorted':'sortable'}" onclick="sortCtCol('status')">Status<span class="sort-arrow">${ctSort.col==='status'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
         <th class="${ctSort.col==='rep1'?'sortable sorted':'sortable'}" onclick="sortCtCol('rep1')">Rep<span class="sort-arrow">${ctSort.col==='rep1'?(ctSort.dir==='asc'?'&#9650;':'&#9660;'):'&#9660;'}</span></th>
+        <th style="width:80px;"></th>
       </tr></thead>
       <tbody>
       ${d.contracts.map(ct => `
@@ -3609,6 +3922,7 @@ async function loadAccountContracts() {
           <td style="white-space:nowrap;">${fmtSmDate(ct.contract_end)}</td>
           <td>${esc(ct.status || '')}</td>
           <td>${esc(ct.rep1 || '')}</td>
+          <td onclick="event.stopPropagation()"><button class="btn btn-sm" onclick="renewContractById(${ct.id})" title="Create renewal copy">Renew</button></td>
         </tr>
       `).join('')}
       </tbody>
@@ -3820,6 +4134,9 @@ async function openContractForm(contractId, accountName) {
     document.getElementById('ctRep2').value = ct.rep2 || '';
     autoFillTerritory('ctRep2','ctTerritory2');
     document.getElementById('ctNotes').value = ct.notes || '';
+    document.getElementById('ctGenInsBtn').style.display = '';
+    document.getElementById('ctRenewBtn').style.display = '';
+    document.getElementById('ctAutoGenWrap').style.display = 'none';
   } else {
     document.getElementById('contractModalTitle').textContent = 'New Contract';
     ['ctPub','ctType','ctRateCard','ctRate','ctStart','ctEnd','ctTerms',
@@ -3830,6 +4147,11 @@ async function openContractForm(contractId, accountName) {
     buildBillToOptions(acctName, agencyInfo.agency_name, '');
     document.getElementById('ctStatus').value = 'Active';
     document.getElementById('ctCreditHold').value = '0';
+    document.getElementById('ctGenInsBtn').style.display = 'none';
+    document.getElementById('ctRenewBtn').style.display = 'none';
+    document.getElementById('ctAutoGenWrap').style.display = '';
+    document.getElementById('ctAutoGen').checked = true;
+    document.getElementById('ctAutoGenInfo').textContent = 'Insertions will be created for each issue date within the contract period after saving.';
   }
   m.classList.add('open');
 }
@@ -3849,7 +4171,22 @@ function isoToSmDate(d) {
   return `${parts[1]}/${parts[2]}/${parts[0].slice(-2)}`;
 }
 
+function validateForm(modalId, requiredIds) {
+  let valid = true;
+  const modal = document.getElementById(modalId);
+  modal.querySelectorAll('.form-group.invalid').forEach(g => g.classList.remove('invalid'));
+  requiredIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value || el.value === '') {
+      el.closest('.form-group').classList.add('invalid');
+      valid = false;
+    }
+  });
+  return valid;
+}
+
 async function saveContract() {
+  if (!validateForm('contractModal', ['ctPub','ctType','ctStart','ctEnd'])) return;
   const id = document.getElementById('ctModalId').value;
   const data = {
     account_name: document.getElementById('ctModalAccount').value,
@@ -3873,9 +4210,56 @@ async function saveContract() {
   };
   const url = id ? `/api/sales/contracts/${id}` : '/api/sales/contracts';
   const method = id ? 'PUT' : 'POST';
-  await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  const resp = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  const result = await resp.json();
+
+  if (!id && document.getElementById('ctAutoGen').checked && result.id) {
+    const genResp = await fetch(`/api/sales/contracts/${result.id}/generate-insertions`, { method: 'POST' });
+    const genResult = await genResp.json();
+    if (genResult.created > 0) {
+      alert(`Contract saved. ${genResult.created} insertion${genResult.created !== 1 ? 's' : ''} auto-created for ${genResult.matched_issues} matching issue date${genResult.matched_issues !== 1 ? 's' : ''}.`);
+    } else {
+      alert(`Contract saved. No matching issue dates found in the calendar for this publication and date range.`);
+    }
+  }
+
   document.getElementById('contractModal').classList.remove('open');
   openSalesDetail(currentSalesAccountId);
+}
+
+async function generateInsertionsForContract() {
+  const id = document.getElementById('ctModalId').value;
+  if (!id) return;
+  if (!confirm('Generate insertions for all issue dates within this contract period?')) return;
+  const resp = await fetch(`/api/sales/contracts/${id}/generate-insertions`, { method: 'POST' });
+  const result = await resp.json();
+  if (result.error) { alert(result.error); return; }
+  if (result.created > 0) {
+    alert(`${result.created} insertion${result.created !== 1 ? 's' : ''} created for ${result.matched_issues} matching issue date${result.matched_issues !== 1 ? 's' : ''}.`);
+  } else {
+    alert(result.matched_issues > 0
+      ? 'All matching issue dates already have insertions for this contract.'
+      : 'No matching issue dates found in the calendar for this publication and date range.');
+  }
+  document.getElementById('contractModal').classList.remove('open');
+  openSalesDetail(currentSalesAccountId);
+}
+
+function renewContractById(id) { renewContract(id); }
+
+async function renewContract(contractIdOverride) {
+  const id = contractIdOverride || document.getElementById('ctModalId').value;
+  if (!id) return;
+  if (!confirm('Create a renewal contract with dates shifted forward?')) return;
+  const resp = await fetch(`/api/sales/contracts/${id}/renew`, { method: 'POST' });
+  const result = await resp.json();
+  if (result.error) { alert(result.error); return; }
+  alert('Renewal contract created with status "Pending". Opening it now...');
+  document.getElementById('contractModal').classList.remove('open');
+  if (currentSalesAccountId) {
+    await openSalesDetail(currentSalesAccountId);
+  }
+  openContractForm(result.new_contract_id);
 }
 
 async function deleteContract() {
@@ -3929,6 +4313,7 @@ async function openInsertionForm(insertionId, accountName) {
 }
 
 async function saveInsertion() {
+  if (!validateForm('insertionModal', ['insPub','insIssueDate','insType','insSize'])) return;
   const id = document.getElementById('insModalId').value;
   const statusVal = document.getElementById('insStatus').value;
   const data = {
@@ -4089,7 +4474,7 @@ async function loadDashboard() {
         <button class="btn btn-sm btn-danger" onclick="deleteScheduled(${t.id})">Del</button>
       </div>
     </div>`;
-  }).join('') : '<div style="color:var(--text3);font-size:13px;padding:12px 0;">No upcoming tasks. Click + Schedule to create one.</div>';
+  }).join('') : '<div class="empty-state" style="padding:24px 12px;"><div class="empty-icon">&#128203;</div><p>No upcoming tasks</p><button class="btn btn-green btn-sm" onclick="openScheduleModal()">+ Schedule a Task</button></div>';
 
   document.getElementById('dashSales').innerHTML = (d.recent_sales || []).length ?
     d.recent_sales.map(s => `<div class="dash-item" style="cursor:pointer;" onclick="${s.account_id ? `salesDetailReturnTo='dashboard';showTab('sales');setTimeout(()=>openSalesDetail(${s.account_id}),100)` : ''}">
@@ -4098,7 +4483,7 @@ async function loadDashboard() {
         <div class="secondary">${esc(s.publication || '')} &middot; ${esc(s.type_ad || '')} &middot; ${esc(s.ad_size || '')}</div>
       </div>
       <div class="dash-amount">${fmtMoney(s.ad_cost)}</div>
-    </div>`).join('') : '<div style="color:var(--text3);font-size:13px;">No recent sales.</div>';
+    </div>`).join('') : '<div class="empty-state" style="padding:24px 12px;"><div class="empty-icon">&#128176;</div><p>No recent sales activity</p></div>';
 
   const typeIcons = {tasks:'&#128203;',emails:'&#9993;',notes:'&#128221;',meetings:'&#128197;',calls:'&#128222;'};
   document.getElementById('dashActivity').innerHTML = (d.recent_activities || []).slice(0, 8).map(a => {
@@ -4113,7 +4498,7 @@ async function loadDashboard() {
       </div>
       <div class="dash-meta">${ts}</div>
     </div>`;
-  }).join('') || '<div style="color:var(--text3);font-size:13px;">No recent activity.</div>';
+  }).join('') || '<div class="empty-state" style="padding:24px 12px;"><div class="empty-icon">&#128172;</div><p>No recent activity</p></div>';
 
   document.getElementById('dashLists').innerHTML = (d.recent_lists || []).map(l =>
     `<div class="dash-item" style="cursor:pointer;" onclick="showTab('lists');setTimeout(()=>openListDetail(${l.id}),100)">
@@ -4123,7 +4508,7 @@ async function loadDashboard() {
       </div>
       <div class="dash-meta">${new Date(l.created_at).toLocaleDateString()}</div>
     </div>`
-  ).join('') || '<div style="color:var(--text3);font-size:13px;">No lists created yet.</div>';
+  ).join('') || '<div class="empty-state" style="padding:24px 12px;"><div class="empty-icon">&#128209;</div><p>No lists created yet</p><button class="btn btn-green btn-sm" onclick="showTab(\'lists\');openListBuilder()">+ Create List</button></div>';
 
   const ov = d.overdue_tasks || 0;
   document.getElementById('dashOverdue').innerHTML = `
@@ -5158,25 +5543,35 @@ async function bulkAddToList() {
 // ══════════════════════════════════════
 // NOTES
 // ══════════════════════════════════════
+const activityIcons = {call: '\u{1F4DE}', email: '\u{2709}', meeting: '\u{1F4C5}', note: '\u{1F4DD}'};
+const activityLabels = {call: 'Call', email: 'Email', meeting: 'Meeting', note: 'Note'};
 async function loadNotes(entityType, entityId, containerId) {
   const d = await (await fetch(`/api/notes?entity_type=${entityType}&entity_id=${entityId}`)).json();
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = d.map(n =>
-    `<div class="note-card">
-      <div class="note-meta">${esc(n.created_by)} &middot; ${n.created_at ? formatDate(n.created_at) : ''}</div>
+  container.innerHTML = d.map(n => {
+    const atype = n.activity_type || 'note';
+    const icon = activityIcons[atype] || activityIcons.note;
+    const label = activityLabels[atype] || 'Note';
+    return `<div class="note-card">
+      <div class="note-meta"><span style="margin-right:4px;">${icon}</span><strong>${label}</strong> &middot; ${esc(n.created_by)} &middot; ${n.created_at ? formatDate(n.created_at) : ''}</div>
       <div class="note-text">${esc(n.content)}</div>
       <span class="note-del" onclick="deleteNote(${n.id},'${entityType}','${entityId}','${containerId}')">&#10005;</span>
-    </div>`
-  ).join('') || '<p style="color:var(--text3);font-size:12px;">No notes yet</p>';
+    </div>`;
+  }).join('') || '<p style="color:var(--text3);font-size:12px;">No activity logged yet</p>';
 }
 async function addNote(entityType, entityId, containerId) {
+  addActivity(entityType, entityId, containerId);
+}
+async function addActivity(entityType, entityId, containerId) {
   const textarea = document.getElementById(containerId + '_input');
   const content = textarea.value.trim();
   if (!content) return;
+  const typeSelect = document.getElementById(containerId + '_type');
+  const activity_type = typeSelect ? typeSelect.value : 'note';
   await fetch('/api/notes', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ entity_type: entityType, entity_id: entityId, content: content })
+    body: JSON.stringify({ entity_type: entityType, entity_id: entityId, content: content, activity_type: activity_type })
   });
   textarea.value = '';
   loadNotes(entityType, entityId, containerId);
@@ -5446,13 +5841,23 @@ async function loadAdminRateCards() {
     return;
   }
   let html = `<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">${rows.length} entries</div>`;
-  html += '<table><thead><tr><th>Rate Card</th><th>Ad Size</th><th>Type</th><th>Color</th><th>Rate</th><th style="text-align:right;">Cost</th><th style="width:60px;"></th></tr></thead><tbody>';
+  html += '<table><thead><tr><th>Rate Card</th><th>Ad Size</th><th>Type</th><th>Color</th><th>Rate</th><th style="text-align:right;">Cost</th><th>Status</th><th style="width:120px;">Actions</th></tr></thead><tbody>';
   rows.forEach(r => {
-    html += `<tr>
+    const isActive = r.active !== 0;
+    const statusBadge = isActive
+      ? '<span style="display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;background:#e0f5d0;color:#2a7a0a;">Active</span>'
+      : '<span style="display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;background:#f3e8e8;color:#991b1b;">Inactive</span>';
+    const toggleLabel = isActive ? 'Deactivate' : 'Activate';
+    const toggleBtn = `<button class="btn btn-sm" onclick="toggleRateCardActive(${r.id},${isActive ? 0 : 1})">${toggleLabel}</button>`;
+    const deleteBtn = r.has_history
+      ? ''
+      : `<button class="btn btn-sm btn-danger" onclick="deleteRateCard(${r.id})" title="Delete">&#10005;</button>`;
+    html += `<tr style="${isActive ? '' : 'opacity:0.55;'}">
       <td>${esc(r.rate_card_num)}</td><td>${esc(r.ad_size)}</td><td>${esc(r.type_ad)}</td>
       <td>${esc(r.color)}</td><td>${r.rate || ''}</td>
       <td style="text-align:right;font-weight:600;">$${(r.ad_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteRateCard(${r.id})">&#10005;</button></td>
+      <td>${statusBadge}</td>
+      <td style="display:flex;gap:4px;">${toggleBtn}${deleteBtn}</td>
     </tr>`;
   });
   html += '</tbody></table>';
@@ -5488,9 +5893,23 @@ async function saveAdminRateCard() {
   loadAdminRateCards();
 }
 
+async function toggleRateCardActive(id, active) {
+  await fetch(`/api/admin/rate-cards/${id}`, {
+    method: 'PUT', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ active })
+  });
+  _lookups = null;
+  loadAdminRateCards();
+}
+
 async function deleteRateCard(id) {
   if (!confirm('Delete this rate card entry?')) return;
-  await fetch(`/api/admin/rate-cards/${id}`, { method: 'DELETE' });
+  const res = await fetch(`/api/admin/rate-cards/${id}`, { method: 'DELETE' });
+  if (res.status === 409) {
+    const d = await res.json();
+    alert(d.error || 'Cannot delete — rate card has history.');
+    return;
+  }
   _lookups = null;
   loadAdminRateCards();
 }
@@ -6127,23 +6546,177 @@ async function loadRevRec() {
 
 async function loadRenewals() {
   const days = document.getElementById('renewalDays').value;
-  const data = await (await fetch('/api/sales/renewals?days=' + days)).json();
+  const q = (document.getElementById('renewalSearch').value || '').trim();
+  const rep = document.getElementById('renewalRepFilter').value;
+  const pub = document.getElementById('renewalPubFilter').value;
+  let allData = await (await fetch('/api/sales/renewals?days=' + days)).json();
+  if (!window._renewalFiltersPopulated) {
+    const reps = [...new Set(allData.map(r => r.rep1).filter(Boolean))].sort();
+    const pubs = [...new Set(allData.map(r => r.publication).filter(Boolean))].sort();
+    const repSel = document.getElementById('renewalRepFilter');
+    const pubSel = document.getElementById('renewalPubFilter');
+    reps.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; repSel.appendChild(o); });
+    pubs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; pubSel.appendChild(o); });
+    window._renewalFiltersPopulated = true;
+  }
+  const data = allData.filter(r => {
+    if (q && !(r.account_name || '').toLowerCase().includes(q.toLowerCase())) return false;
+    if (rep && r.rep1 !== rep) return false;
+    if (pub && r.publication !== pub) return false;
+    return true;
+  });
+  document.getElementById('bulkRenewBtn').style.display = 'none';
   document.getElementById('renewalsList').innerHTML = data.length ? `
     <div style="margin-bottom:12px;color:var(--text2);">${data.length} contract${data.length!==1?'s':''} expiring within ${days} days</div>
-    <table><thead><tr><th>Account</th><th>Publication</th><th>Rep</th><th>End Date</th><th style="text-align:right">Days Left</th><th>Status</th><th style="text-align:right">Revenue</th><th>Actions</th></tr></thead>
+    <table><thead><tr><th><input type="checkbox" id="renewSelectAll" onchange="toggleAllRenewals(this.checked)"></th><th>Account</th><th>Publication</th><th>Rep</th><th>End Date</th><th style="text-align:right">Days Left</th><th>Status</th><th style="text-align:right">Revenue</th><th>Actions</th></tr></thead>
     <tbody>${data.map(r => {
       const badge = r.urgency === 'expired' ? 'badge-proposal' : r.urgency === 'urgent' ? 'badge-proposal' : 'badge-confirmed';
       const label = r.urgency === 'expired' ? 'Expired' : r.urgency === 'urgent' ? 'Urgent' : 'Upcoming';
       return `<tr>
+        <td><input type="checkbox" class="renew-check" value="${r.id}" onchange="updateBulkRenewBtn()"></td>
         <td>${esc(r.account_name)}</td><td>${esc(r.publication||'')}</td><td>${esc(r.rep1||'')}</td>
         <td>${r.contract_end_iso||''}</td>
         <td style="text-align:right;font-weight:600;color:${r.urgency==='expired'?'#e74c3c':r.urgency==='urgent'?'#e67e22':'inherit'}">${r.days_remaining ?? ''}</td>
         <td><span class="${badge}">${label}</span></td>
         <td style="text-align:right">${fmtMoney(r.total_revenue)}</td>
-        <td><button class="btn btn-sm btn-green" onclick="openContractForm(null,'${esc(r.account_name)}')">Renew</button>
-            <button class="btn btn-sm" onclick="openProposalForAccount('${esc(r.account_name)}')">Proposal</button></td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm btn-green" onclick="renewContractById(${r.id})">Renew</button>
+          <button class="btn btn-sm" onclick="downloadContractProposal(${r.id})" title="Download proposal PDF">Proposal</button>
+          <button class="btn btn-sm" onclick="sendRenewalEmail(${r.id})" title="Draft renewal email">Email</button>
+        </td>
       </tr>`;
     }).join('')}</tbody></table>` : '<p style="color:var(--text3);">No contracts expiring within this timeframe.</p>';
+  loadRevenueForecast();
+}
+
+function toggleAllRenewals(checked) {
+  document.querySelectorAll('.renew-check').forEach(cb => cb.checked = checked);
+  updateBulkRenewBtn();
+}
+
+function updateBulkRenewBtn() {
+  const checked = document.querySelectorAll('.renew-check:checked');
+  const btn = document.getElementById('bulkRenewBtn');
+  document.getElementById('bulkRenewCount').textContent = checked.length;
+  btn.style.display = checked.length > 0 ? '' : 'none';
+}
+
+async function bulkRenewSelected() {
+  const ids = [...document.querySelectorAll('.renew-check:checked')].map(cb => parseInt(cb.value));
+  if (!ids.length) return;
+  if (!confirm(`Renew ${ids.length} contract${ids.length !== 1 ? 's' : ''}? This will create ${ids.length} new pending contract${ids.length !== 1 ? 's' : ''}.`)) return;
+  const resp = await fetch('/api/sales/contracts/bulk-renew', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ids})
+  });
+  const result = await resp.json();
+  if (result.ok) {
+    alert(`Created ${result.created.length} renewal contract${result.created.length !== 1 ? 's' : ''}.${result.errors.length ? ' ' + result.errors.length + ' failed.' : ''}`);
+    loadRenewals();
+  } else {
+    alert('Error: ' + (result.error || 'Unknown error'));
+  }
+}
+
+async function downloadContractProposal(contractId) {
+  const resp = await fetch('/api/sales/contracts/' + contractId + '/proposal-pdf');
+  if (!resp.ok) { alert('Error generating proposal'); return; }
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'renewal_proposal.pdf';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function sendRenewalEmail(contractId) {
+  const resp = await fetch('/api/sales/contracts/' + contractId + '/renewal-email-data');
+  if (!resp.ok) { alert('Error loading contract data'); return; }
+  const d = await resp.json();
+  const to = d.contact_email || '';
+  const name = d.contact_name || d.account_name;
+  const firstName = (d.contact_name || '').split(' ')[0] || 'there';
+  const subject = `Renew Your ${d.publication} Advertising — ${d.account_name}`;
+  const body = `Hi ${firstName},\n\nI hope you're doing well! I'm reaching out regarding your ${d.publication} advertising contract, which ${d.contract_end ? (new Date(d.contract_end) < new Date() ? 'expired on ' + d.contract_end : 'is set to expire on ' + d.contract_end) : 'is expiring soon'}.\n\nOver the current term, your campaign included ${d.total_insertions} insertion${d.total_insertions !== 1 ? 's' : ''} with a total investment of $${(d.total_revenue||0).toLocaleString()}.\n\nI'd love to discuss renewal options and how we can continue building on your visibility with the landscape architecture community. We have some exciting opportunities for the upcoming year.\n\nWould you have time for a quick call this week?\n\nBest regards`;
+  document.getElementById('renewalEmailTo').value = to;
+  document.getElementById('renewalEmailSubject').value = subject;
+  document.getElementById('renewalEmailBody').value = body;
+  document.getElementById('renewalEmailAccount').textContent = d.account_name;
+  document.getElementById('renewalEmailModal').classList.add('open');
+}
+
+async function sendRenewalEmailDraft() {
+  const to = document.getElementById('renewalEmailTo').value.trim();
+  const subject = document.getElementById('renewalEmailSubject').value.trim();
+  const body = document.getElementById('renewalEmailBody').value.trim();
+  if (!to) { alert('Please enter a recipient email address.'); return; }
+  try {
+    const bodyHtml = body.split('\n').map(line => line ? `<p>${line}</p>` : '<br>').join('');
+    const draftResp = await fetch('/.well-known/mcp', {method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({tool: 'superhuman_create_draft', args: {to, subject, body: bodyHtml}})});
+    if (draftResp.ok) {
+      alert('Draft created in Superhuman!');
+      document.getElementById('renewalEmailModal').classList.remove('open');
+      return;
+    }
+  } catch(e) {}
+  const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailto, '_blank');
+  document.getElementById('renewalEmailModal').classList.remove('open');
+}
+
+async function loadRevenueForecast() {
+  const resp = await fetch('/api/sales/revenue-forecast');
+  const data = await resp.json();
+  const maxVal = Math.max(...data.months.map(m => Math.max(m.current_confirmed + m.pipeline, m.prior_year)));
+  const barScale = maxVal > 0 ? 200 / maxVal : 1;
+  const totalCur = data.months.reduce((s, m) => s + m.current_confirmed, 0);
+  const totalPipe = data.months.reduce((s, m) => s + m.pipeline, 0);
+  const totalPrev = data.months.reduce((s, m) => s + m.prior_year, 0);
+  const projected = totalCur + totalPipe;
+  const gap = totalPrev - projected;
+  document.getElementById('revenueForecast').innerHTML = `
+    <h3 style="margin-bottom:4px;">Revenue Forecast: ${data.current_year} vs ${data.prior_year}</h3>
+    <div style="display:flex;gap:24px;margin-bottom:12px;font-size:13px;color:var(--text2);">
+      <span><strong style="color:var(--teal);">${fmtMoney(totalCur)}</strong> confirmed</span>
+      <span><strong style="color:var(--green);">${fmtMoney(totalPipe)}</strong> pipeline</span>
+      <span><strong style="color:var(--text3);">${fmtMoney(totalPrev)}</strong> prior year</span>
+      ${gap > 0 ? `<span><strong style="color:#e74c3c;">${fmtMoney(gap)}</strong> gap from lapsed (${data.lapsed_accounts} accounts)</span>` : `<span style="color:var(--green);">+${fmtMoney(-gap)} ahead of prior year</span>`}
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:4px;height:220px;padding:10px 0;border-bottom:1px solid var(--border);">
+      ${data.months.map(m => {
+        const ch = Math.round(m.current_confirmed * barScale);
+        const ph = Math.round(m.pipeline * barScale);
+        const pyh = Math.round(m.prior_year * barScale);
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <div style="display:flex;align-items:flex-end;gap:2px;height:200px;">
+            <div style="width:12px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="height:${ph}px;background:var(--green);border-radius:2px 2px 0 0;"></div>
+              <div style="height:${ch}px;background:var(--teal);border-radius:${ph?'0':'2px 2px'} 0 0;"></div>
+            </div>
+            <div style="width:12px;height:${pyh}px;background:var(--border);border-radius:2px 2px 0 0;"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);">${m.label}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text3);">
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--teal);border-radius:2px;"></span> Confirmed</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;"></span> Pipeline</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--border);border-radius:2px;"></span> ${data.prior_year}</span>
+    </div>`;
+}
+
+function exportRenewalsCSV() {
+  const days = document.getElementById('renewalDays').value;
+  const q = (document.getElementById('renewalSearch').value || '').trim();
+  const rep = document.getElementById('renewalRepFilter').value;
+  const pub = document.getElementById('renewalPubFilter').value;
+  let url = `/api/sales/renewals/csv?days=${days}`;
+  if (q) url += `&q=${encodeURIComponent(q)}`;
+  if (rep) url += `&rep=${encodeURIComponent(rep)}`;
+  if (pub) url += `&pub=${encodeURIComponent(pub)}`;
+  window.open(url, '_blank');
 }
 
 // ══════════════════════════════════════
@@ -6212,15 +6785,30 @@ async function generateProposal() {
 
 async function loadDashboardKpis() {
   const data = await (await fetch('/api/dashboard/kpis')).json();
+  const yoyUp = data.yoy_change >= 0;
   const kpiHtml = `
-    <div class="dash-stat"><div class="val">${fmtMoney(data.ytd_revenue)}</div><div class="lbl">${data.current_year} Revenue</div></div>
-    <div class="dash-stat"><div class="val" style="color:${data.yoy_change >= 0 ? 'var(--green)' : '#e74c3c'};">${data.yoy_change >= 0 ? '+' : ''}${data.yoy_change.toFixed(1)}%</div><div class="lbl">vs ${data.current_year - 1}</div></div>
-    <div class="dash-stat"><div class="val">${fmtMoney(data.pipeline_value)}</div><div class="lbl">Pipeline</div></div>
-    <div class="dash-stat"><div class="val" style="color:#e74c3c;">${fmtMoney(data.outstanding_ar)}</div><div class="lbl">Outstanding AR</div></div>
-    <div class="dash-stat"><div class="val">${data.collection_rate.toFixed(0)}%</div><div class="lbl">Collection Rate</div></div>
-    <div class="dash-stat"><div class="val">${data.active_accounts}</div><div class="lbl">Active Accounts</div></div>
+    <div class="dash-stat">
+      <div class="val">${fmtMoney(data.ytd_revenue)}</div>
+      <div class="lbl">${data.current_year} Revenue</div>
+      <div class="trend ${yoyUp ? 'up' : 'down'}">${yoyUp ? '&#9650;' : '&#9660;'} ${yoyUp ? '+' : ''}${data.yoy_change.toFixed(1)}% vs ${data.current_year - 1}</div>
+    </div>
+    <div class="dash-stat">
+      <div class="val">${fmtMoney(data.pipeline_value)}</div>
+      <div class="lbl">Pipeline</div>
+    </div>
+    <div class="dash-stat">
+      <div class="val" style="color:${data.outstanding_ar > 0 ? 'var(--red)' : 'var(--teal)'};">${fmtMoney(data.outstanding_ar)}</div>
+      <div class="lbl">Outstanding AR</div>
+    </div>
+    <div class="dash-stat">
+      <div class="val">${data.collection_rate.toFixed(0)}%</div>
+      <div class="lbl">Collection Rate</div>
+    </div>
+    <div class="dash-stat">
+      <div class="val">${data.active_accounts}</div>
+      <div class="lbl">Active Accounts</div>
+    </div>
   `;
-  // Insert KPI row before the existing dash-grid
   let kpiRow = document.getElementById('dashKpis');
   if (!kpiRow) {
     kpiRow = document.createElement('div');

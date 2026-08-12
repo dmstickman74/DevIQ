@@ -5,7 +5,7 @@ import sqlite3
 import os
 import shutil
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_file, Response
 
 app = Flask(__name__)
@@ -32,6 +32,8 @@ def init_db():
         description TEXT DEFAULT '',
         target TEXT NOT NULL DEFAULT 'contacts',
         filters TEXT NOT NULL,
+        list_type TEXT NOT NULL DEFAULT 'dynamic',
+        static_ids TEXT DEFAULT '[]',
         created_by TEXT DEFAULT 'admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -130,6 +132,32 @@ def init_db():
 
 init_db()
 
+def _ensure_list_type_cols():
+    db = get_db()
+    c = db.cursor()
+    c.execute("PRAGMA table_info(marketing_lists)")
+    cols = {r["name"] for r in c.fetchall()}
+    if "list_type" not in cols:
+        db.execute("ALTER TABLE marketing_lists ADD COLUMN list_type TEXT NOT NULL DEFAULT 'dynamic'")
+    if "static_ids" not in cols:
+        db.execute("ALTER TABLE marketing_lists ADD COLUMN static_ids TEXT DEFAULT '[]'")
+    db.commit()
+    db.close()
+
+_ensure_list_type_cols()
+
+def _ensure_rate_card_active_col():
+    db = get_db()
+    c = db.cursor()
+    c.execute("PRAGMA table_info(sm_rate_card)")
+    cols = {r["name"] for r in c.fetchall()}
+    if "active" not in cols:
+        db.execute("ALTER TABLE sm_rate_card ADD COLUMN active INTEGER DEFAULT 1")
+        db.commit()
+    db.close()
+
+_ensure_rate_card_active_col()
+
 def apply_advanced_filters(cursor, table, filters_json, base_where=None, base_params=None):
     where = list(base_where or [])
     params = list(base_params or [])
@@ -139,8 +167,11 @@ def apply_advanced_filters(cursor, table, filters_json, base_where=None, base_pa
 
     filters = json.loads(filters_json) if isinstance(filters_json, str) else filters_json
 
-    col_fields = {"firstname","lastname","email","phone","company","jobtitle",
-                  "city","state","country","owner_name","lifecyclestage","hs_lead_status"}
+    if table == "companies":
+        col_fields = {"name","domain","industry","city","state","country","phone","owner_name"}
+    else:
+        col_fields = {"firstname","lastname","email","phone","company","jobtitle",
+                      "city","state","country","owner_name","lifecyclestage","hs_lead_status"}
 
     for f in filters:
         field = f.get("field", "")
@@ -869,6 +900,9 @@ def export_companies():
         where.append("(name LIKE ? OR domain LIKE ?)")
         params.extend([f"%{search}%", f"%{search}%"])
 
+    if filters_json:
+        where, params = apply_advanced_filters(c, "companies", filters_json, where, params)
+
     where_clause = " WHERE " + " AND ".join(where) if where else ""
     c.execute(f"SELECT id, all_properties FROM companies{where_clause} ORDER BY name ASC", params)
 
@@ -1071,12 +1105,16 @@ def list_companies():
     page = int(request.args.get("page", 1))
     per_page = int(request.args.get("per_page", 50))
     search = request.args.get("search", "").strip()
+    filters_json = request.args.get("filters", "")
 
     where = []
     params = []
     if search:
         where.append("(name LIKE ? OR domain LIKE ?)")
         params.extend([f"%{search}%", f"%{search}%"])
+
+    if filters_json:
+        where, params = apply_advanced_filters(c, "companies", filters_json, where, params)
 
     where_clause = " WHERE " + " AND ".join(where) if where else ""
     c.execute(f"SELECT COUNT(*) FROM companies{where_clause}", params)
@@ -1187,14 +1225,30 @@ def delete_filter(filter_id):
 def preview_list_count():
     data = request.get_json()
     filters_list = data.get("filters", [])
+    target = data.get("target", "contacts")
+    table = target if target in ("contacts", "companies") else "contacts"
     db = get_db()
     c = db.cursor()
-    where, params = apply_advanced_filters(c, "contacts", filters_list)
+    where, params = apply_advanced_filters(c, table, filters_list)
     where_clause = " WHERE " + " AND ".join(where) if where else ""
-    c.execute(f"SELECT COUNT(*) FROM contacts{where_clause}", params)
+    c.execute(f"SELECT COUNT(*) FROM {table}{where_clause}", params)
     count = c.fetchone()[0]
     db.close()
     return jsonify({"count": count})
+
+def _list_count(c, item):
+    target = item.get("target", "contacts")
+    table = target if target in ("contacts", "companies") else "contacts"
+    list_type = item.get("list_type", "dynamic")
+    if list_type == "static":
+        static_ids = item.get("static_ids", [])
+        return len(static_ids)
+    filters_list = item.get("filters", [])
+    where, params = apply_advanced_filters(c, table, filters_list)
+    where_clause = " WHERE " + " AND ".join(where) if where else ""
+    c2 = c.connection.cursor()
+    c2.execute(f"SELECT COUNT(*) FROM {table}{where_clause}", params)
+    return c2.fetchone()[0]
 
 @app.route("/api/lists", methods=["GET"])
 def list_marketing_lists():
@@ -1202,17 +1256,17 @@ def list_marketing_lists():
     c = db.cursor()
     c.execute("SELECT * FROM marketing_lists ORDER BY name ASC")
     lists = []
+    keys = None
     for r in c.fetchall():
+        if keys is None:
+            keys = r.keys()
         item = {"id": r["id"], "name": r["name"], "description": r["description"],
                 "target": r["target"], "filters": json.loads(r["filters"]),
-                "created_by": r["created_by"] if "created_by" in r.keys() else "admin",
+                "list_type": r["list_type"] if "list_type" in keys else "dynamic",
+                "static_ids": json.loads(r["static_ids"] or "[]") if "static_ids" in keys else [],
+                "created_by": r["created_by"] if "created_by" in keys else "admin",
                 "created_at": r["created_at"], "updated_at": r["updated_at"]}
-        filters_list = item["filters"]
-        where, params = apply_advanced_filters(c, "contacts", filters_list)
-        where_clause = " WHERE " + " AND ".join(where) if where else ""
-        c2 = db.cursor()
-        c2.execute(f"SELECT COUNT(*) FROM contacts{where_clause}", params)
-        item["count"] = c2.fetchone()[0]
+        item["count"] = _list_count(c, item)
         lists.append(item)
     db.close()
     return jsonify(lists)
@@ -1221,9 +1275,12 @@ def list_marketing_lists():
 def create_marketing_list():
     data = request.get_json()
     db = get_db()
-    db.execute("INSERT INTO marketing_lists (name, description, target, filters, created_by) VALUES (?, ?, ?, ?, ?)",
+    list_type = data.get("list_type", "dynamic")
+    static_ids = json.dumps(data.get("static_ids", []))
+    db.execute("""INSERT INTO marketing_lists (name, description, target, filters, list_type, static_ids, created_by)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)""",
                (data["name"], data.get("description", ""), data.get("target", "contacts"),
-                json.dumps(data["filters"]), data.get("created_by", "admin")))
+                json.dumps(data.get("filters", [])), list_type, static_ids, data.get("created_by", "admin")))
     db.commit()
     lid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
     db.close()
@@ -1238,14 +1295,13 @@ def get_marketing_list(list_id):
     if not r:
         db.close()
         return jsonify({"error": "Not found"}), 404
+    keys = r.keys()
     item = {"id": r["id"], "name": r["name"], "description": r["description"],
             "target": r["target"], "filters": json.loads(r["filters"]),
+            "list_type": r["list_type"] if "list_type" in keys else "dynamic",
+            "static_ids": json.loads(r["static_ids"] or "[]") if "static_ids" in keys else [],
             "created_at": r["created_at"], "updated_at": r["updated_at"]}
-    filters_list = item["filters"]
-    where, params = apply_advanced_filters(c, "contacts", filters_list)
-    where_clause = " WHERE " + " AND ".join(where) if where else ""
-    c.execute(f"SELECT COUNT(*) FROM contacts{where_clause}", params)
-    item["count"] = c.fetchone()[0]
+    item["count"] = _list_count(c, item)
     db.close()
     return jsonify(item)
 
@@ -1253,51 +1309,86 @@ def get_marketing_list(list_id):
 def list_contacts_in_list(list_id):
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT filters FROM marketing_lists WHERE id = ?", (list_id,))
+    c.execute("SELECT * FROM marketing_lists WHERE id = ?", (list_id,))
     r = c.fetchone()
     if not r:
         db.close()
         return jsonify({"error": "Not found"}), 404
 
+    keys = r.keys()
+    target = r["target"] or "contacts"
+    list_type = r["list_type"] if "list_type" in keys else "dynamic"
     filters_list = json.loads(r["filters"])
+    static_ids = json.loads(r["static_ids"] or "[]") if "static_ids" in keys else []
     page = int(request.args.get("page", 1))
     per_page = int(request.args.get("per_page", 50))
-    sort = request.args.get("sort", "lastname")
     order = request.args.get("order", "asc")
     if order not in ("asc", "desc"):
         order = "asc"
-    allowed_sorts = {"firstname","lastname","email","company","owner_name","city","state","createdate","lastmodifieddate"}
-    if sort not in allowed_sorts:
-        sort = "lastname"
 
-    where, params = apply_advanced_filters(c, "contacts", filters_list)
+    if target == "companies":
+        sort = request.args.get("sort", "name")
+        allowed_sorts = {"name","domain","industry","city","state","country","phone","owner_name"}
+        if sort not in allowed_sorts:
+            sort = "name"
+        table = "companies"
+    else:
+        sort = request.args.get("sort", "lastname")
+        allowed_sorts = {"firstname","lastname","email","company","owner_name","city","state","createdate","lastmodifieddate"}
+        if sort not in allowed_sorts:
+            sort = "lastname"
+        table = "contacts"
+
+    where = []
+    params = []
+    if list_type == "static" and static_ids:
+        placeholders = ",".join(["?"] * len(static_ids))
+        where.append(f"id IN ({placeholders})")
+        params.extend(static_ids)
+    elif list_type == "dynamic":
+        where, params = apply_advanced_filters(c, table, filters_list)
+
     where_clause = " WHERE " + " AND ".join(where) if where else ""
 
-    c.execute(f"SELECT COUNT(*) FROM contacts{where_clause}", params)
+    c.execute(f"SELECT COUNT(*) FROM {table}{where_clause}", params)
     total = c.fetchone()[0]
 
     offset = (page - 1) * per_page
-    c.execute(f"""SELECT id, firstname, lastname, email, phone, company, jobtitle,
-                         city, state, country, owner_name, lifecyclestage, hs_lead_status,
-                         createdate, lastmodifieddate
-                  FROM contacts{where_clause}
-                  ORDER BY {sort} {order}
-                  LIMIT ? OFFSET ?""", params + [per_page, offset])
-
-    contacts = []
-    for row in c.fetchall():
-        d = dict(row)
-        cid = d["id"]
-        c2 = db.cursor()
-        c2.execute("SELECT COUNT(*) FROM activities WHERE contact_id = ?", (cid,))
-        d["activity_count"] = c2.fetchone()[0]
-        c2.execute("SELECT MAX(timestamp) FROM activities WHERE contact_id = ?", (cid,))
-        d["last_activity"] = c2.fetchone()[0]
-        contacts.append(d)
-
-    db.close()
-    return jsonify({"contacts": contacts, "total": total, "page": page, "per_page": per_page,
-                     "total_pages": (total + per_page - 1) // per_page})
+    if target == "companies":
+        c.execute(f"""SELECT id, name, domain, industry, city, state, country, phone, owner_name
+                      FROM {table}{where_clause}
+                      ORDER BY {sort} {order}
+                      LIMIT ? OFFSET ?""", params + [per_page, offset])
+        items = []
+        for row in c.fetchall():
+            d = dict(row)
+            c2 = db.cursor()
+            c2.execute("SELECT COUNT(*) FROM contact_companies WHERE company_id = ?", (d["id"],))
+            d["contact_count"] = c2.fetchone()[0]
+            items.append(d)
+        db.close()
+        return jsonify({"companies": items, "total": total, "page": page, "per_page": per_page,
+                         "total_pages": (total + per_page - 1) // per_page})
+    else:
+        c.execute(f"""SELECT id, firstname, lastname, email, phone, company, jobtitle,
+                             city, state, country, owner_name, lifecyclestage, hs_lead_status,
+                             createdate, lastmodifieddate
+                      FROM {table}{where_clause}
+                      ORDER BY {sort} {order}
+                      LIMIT ? OFFSET ?""", params + [per_page, offset])
+        contacts = []
+        for row in c.fetchall():
+            d = dict(row)
+            cid = d["id"]
+            c2 = db.cursor()
+            c2.execute("SELECT COUNT(*) FROM activities WHERE contact_id = ?", (cid,))
+            d["activity_count"] = c2.fetchone()[0]
+            c2.execute("SELECT MAX(timestamp) FROM activities WHERE contact_id = ?", (cid,))
+            d["last_activity"] = c2.fetchone()[0]
+            contacts.append(d)
+        db.close()
+        return jsonify({"contacts": contacts, "total": total, "page": page, "per_page": per_page,
+                         "total_pages": (total + per_page - 1) // per_page})
 
 @app.route("/api/lists/<int:list_id>/export", methods=["GET"])
 def export_marketing_list(list_id):
@@ -1357,6 +1448,15 @@ def update_marketing_list(list_id):
     if "filters" in data:
         sets.append("filters = ?")
         params.append(json.dumps(data["filters"]))
+    if "list_type" in data:
+        sets.append("list_type = ?")
+        params.append(data["list_type"])
+    if "static_ids" in data:
+        sets.append("static_ids = ?")
+        params.append(json.dumps(data["static_ids"]))
+    if "target" in data:
+        sets.append("target = ?")
+        params.append(data["target"])
     sets.append("updated_at = CURRENT_TIMESTAMP")
     params.append(list_id)
     db.execute(f"UPDATE marketing_lists SET {', '.join(sets)} WHERE id = ?", params)
@@ -1407,12 +1507,18 @@ def sales_accounts():
     order = request.args.get("order", "asc")
     rep = request.args.get("rep", "")
     pub = request.args.get("pub", "")
+    credit = request.args.get("credit", "")
+    activity = request.args.get("activity", "")
 
     where = []
     params = []
     if q:
         where.append("c.company LIKE ?")
         params.append(f"%{q}%")
+    if credit == "hold":
+        where.append("c.credit_hold = 1")
+    elif credit == "ok":
+        where.append("(c.credit_hold = 0 OR c.credit_hold IS NULL)")
 
     joins = ""
     if rep or pub:
@@ -1423,6 +1529,14 @@ def sales_accounts():
         if pub:
             where.append("ph.publication = ?")
             params.append(pub)
+
+    current_year = str(datetime.now().year)
+    if activity == "active":
+        where.append("EXISTS (SELECT 1 FROM sm_page_history p2 WHERE p2.account_name = c.company AND p2.issue_date LIKE ?)")
+        params.append(f"%/{current_year[2:]}%")
+    elif activity == "lapsed":
+        where.append("NOT EXISTS (SELECT 1 FROM sm_page_history p2 WHERE p2.account_name = c.company AND p2.issue_date LIKE ?)")
+        params.append(f"%/{current_year[2:]}%")
 
     where_sql = ("WHERE " + " AND ".join(where)) if where else ""
 
@@ -1894,6 +2008,129 @@ def delete_contract(contract_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/sales/contracts/<int:contract_id>/generate-insertions", methods=["POST"])
+def generate_insertions_for_contract(contract_id):
+    db = get_db()
+    c = db.cursor()
+    ct = c.execute("SELECT * FROM sm_contracts WHERE id = ?", (contract_id,)).fetchone()
+    if not ct:
+        db.close()
+        return jsonify({"error": "contract not found"}), 404
+    ct = dict(ct)
+    start_iso = _parse_sm_date(ct.get("contract_start", ""))
+    end_iso = _parse_sm_date(ct.get("contract_end", ""))
+    if not start_iso or not end_iso:
+        db.close()
+        return jsonify({"error": "contract missing start/end dates"}), 400
+    pub = ct.get("publication", "")
+    if not pub:
+        db.close()
+        return jsonify({"error": "contract missing publication"}), 400
+
+    issues = c.execute(
+        "SELECT cover_date FROM sm_issue_dates WHERE publication = ?", (pub,)
+    ).fetchall()
+    matching = []
+    for issue in issues:
+        iso = _parse_sm_date(issue["cover_date"])
+        if iso and start_iso <= iso <= end_iso:
+            matching.append(issue["cover_date"])
+    matching.sort(key=lambda d: _parse_sm_date(d))
+
+    rc_row = None
+    if ct.get("rate_card_num"):
+        rc_row = c.execute(
+            "SELECT ad_cost, ad_size, color FROM sm_rate_card WHERE rate_card_num = ? AND type_ad = ? LIMIT 1",
+            (ct["rate_card_num"], ct.get("type_ad", ""))
+        ).fetchone()
+
+    created = 0
+    for issue_date in matching:
+        existing = c.execute(
+            "SELECT 1 FROM sm_page_history WHERE account_name = ? AND publication = ? AND issue_date = ? AND contract_num = ? AND canceled = 0",
+            (ct["account_name"], pub, issue_date, ct.get("contract_id", ""))
+        ).fetchone()
+        if existing:
+            continue
+        vals = {
+            "contract_num": ct.get("contract_id", ""),
+            "account_name": ct.get("account_name", ""),
+            "agency_name": ct.get("agency_name", ""),
+            "bill_name": ct.get("bill_name", ""),
+            "publication": pub,
+            "type_ad": ct.get("type_ad", ""),
+            "issue_date": issue_date,
+            "ad_size": rc_row["ad_size"] if rc_row else "",
+            "color": rc_row["color"] if rc_row else "",
+            "ad_cost": rc_row["ad_cost"] if rc_row else 0,
+            "net_cost": rc_row["ad_cost"] if rc_row else 0,
+            "gross_cost": rc_row["ad_cost"] if rc_row else 0,
+            "rep1": ct.get("rep1", ""),
+            "territory1": ct.get("territory1", ""),
+            "rep2": ct.get("rep2", ""),
+            "territory2": ct.get("territory2", ""),
+            "rate_card_num": ct.get("rate_card_num", ""),
+            "rate": ct.get("rate", ""),
+            "contract_start": ct.get("contract_start", ""),
+            "contract_end": ct.get("contract_end", ""),
+            "credit_hold": ct.get("credit_hold", 0),
+            "is_open": 1,
+            "canceled": 0,
+            "category": "",
+            "headline": "",
+        }
+        cols = ", ".join(vals.keys())
+        placeholders = ", ".join(["?"] * len(vals))
+        c.execute(f"INSERT INTO sm_page_history ({cols}) VALUES ({placeholders})", list(vals.values()))
+        created += 1
+
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "created": created, "matched_issues": len(matching)})
+
+
+@app.route("/api/sales/contracts/<int:contract_id>/renew", methods=["POST"])
+def renew_contract(contract_id):
+    db = get_db()
+    c = db.cursor()
+    ct = c.execute("SELECT * FROM sm_contracts WHERE id = ?", (contract_id,)).fetchone()
+    if not ct:
+        db.close()
+        return jsonify({"error": "contract not found"}), 404
+    ct = dict(ct)
+    start_iso = _parse_sm_date(ct.get("contract_start", ""))
+    end_iso = _parse_sm_date(ct.get("contract_end", ""))
+
+    new_start = ""
+    new_end = ""
+    if start_iso and end_iso:
+        from dateutil.relativedelta import relativedelta
+        s = datetime.strptime(start_iso, "%Y-%m-%d")
+        e = datetime.strptime(end_iso, "%Y-%m-%d")
+        duration = relativedelta(e, s)
+        new_s = e + timedelta(days=1)
+        new_e = new_s + relativedelta(years=duration.years, months=duration.months, days=duration.days)
+        new_start = new_s.strftime("%m/%d/%y 00:00:00")
+        new_end = new_e.strftime("%m/%d/%y 00:00:00")
+
+    fields = ["account_name", "agency_name", "bill_name", "publication",
+              "rate_card_num", "rate", "terms", "agency_discount",
+              "credit_hold", "type_ad", "rep1", "territory1", "rep2", "territory2"]
+    vals = {f: ct.get(f, "") for f in fields}
+    vals["contract_start"] = new_start
+    vals["contract_end"] = new_end
+    vals["status"] = "Pending"
+    vals["notes"] = f"Renewed from contract {ct.get('contract_id', '')} (#{contract_id})"
+    vals["contract_id"] = ""
+    cols = ", ".join(vals.keys())
+    placeholders = ", ".join(["?"] * len(vals))
+    c.execute(f"INSERT INTO sm_contracts ({cols}) VALUES ({placeholders})", list(vals.values()))
+    new_id = c.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "new_contract_id": new_id})
+
+
 @app.route("/api/sales/account-agency")
 def account_agency():
     name = request.args.get("account", "").strip()
@@ -2223,9 +2460,22 @@ def admin_rate_cards():
         where.append("rate_card_num = ?")
         params.append(rc)
     where_sql = ("WHERE " + " AND ".join(where)) if where else ""
-    rows = db.execute(f"SELECT * FROM sm_rate_card {where_sql} ORDER BY publication, rate_card_num, ad_size", params).fetchall()
+    rows = db.execute(f"SELECT * FROM sm_rate_card {where_sql} ORDER BY active DESC, publication, rate_card_num, ad_size", params).fetchall()
+    result = []
+    history_cache = {}
+    c = db.cursor()
+    for r in rows:
+        d = dict(r)
+        if "active" not in d:
+            d["active"] = 1
+        rc_num = d["rate_card_num"]
+        if rc_num not in history_cache:
+            cnt = c.execute("SELECT COUNT(*) FROM sm_page_history WHERE rate_card_num = ?", (rc_num,)).fetchone()[0]
+            history_cache[rc_num] = cnt > 0
+        d["has_history"] = history_cache[rc_num]
+        result.append(d)
     db.close()
-    return jsonify([dict(r) for r in rows])
+    return jsonify(result)
 
 
 @app.route("/api/admin/rate-cards", methods=["POST"])
@@ -2249,7 +2499,7 @@ def admin_rate_card_create():
 def admin_rate_card_update(rc_id):
     data = request.get_json()
     db = get_db()
-    fields = ["publication", "rate_card_num", "ad_size", "rate", "type_ad", "color", "ad_cost"]
+    fields = ["publication", "rate_card_num", "ad_size", "rate", "type_ad", "color", "ad_cost", "active"]
     sets, params = [], []
     for f in fields:
         if f in data:
@@ -2268,6 +2518,13 @@ def admin_rate_card_update(rc_id):
 @app.route("/api/admin/rate-cards/<int:rc_id>", methods=["DELETE"])
 def admin_rate_card_delete(rc_id):
     db = get_db()
+    c = db.cursor()
+    row = c.execute("SELECT rate_card_num FROM sm_rate_card WHERE id = ?", (rc_id,)).fetchone()
+    if row:
+        cnt = c.execute("SELECT COUNT(*) FROM sm_page_history WHERE rate_card_num = ?", (row["rate_card_num"],)).fetchone()[0]
+        if cnt > 0:
+            db.close()
+            return jsonify({"error": f"Cannot delete — rate card '{row['rate_card_num']}' is referenced by {cnt} history records. Deactivate it instead."}), 409
     db.execute("DELETE FROM sm_rate_card WHERE id = ?", (rc_id,))
     log_audit(db, "delete", "Rate Card", rc_id)
     db.commit()
@@ -2829,6 +3086,10 @@ def _init_notes_table():
         created_at TEXT DEFAULT (datetime('now'))
     )""")
     db.execute("CREATE INDEX IF NOT EXISTS idx_notes_entity ON notes(entity_type, entity_id)")
+    try:
+        db.execute("ALTER TABLE notes ADD COLUMN activity_type TEXT DEFAULT 'note'")
+    except Exception:
+        pass
     db.execute("""CREATE TABLE IF NOT EXISTS marketing_list_members (
         list_id INTEGER NOT NULL,
         contact_id TEXT NOT NULL,
@@ -3658,9 +3919,10 @@ def create_note():
     if not entity_type or not entity_id or not content:
         return jsonify({"error": "entity_type, entity_id and content required"}), 400
     db = get_db()
-    db.execute("""INSERT INTO notes (entity_type, entity_id, content, created_by)
-                  VALUES (?, ?, ?, ?)""",
-               (entity_type, str(entity_id), content, created_by))
+    activity_type = data.get("activity_type", "note")
+    db.execute("""INSERT INTO notes (entity_type, entity_id, content, created_by, activity_type)
+                  VALUES (?, ?, ?, ?, ?)""",
+               (entity_type, str(entity_id), content, created_by, activity_type))
     nid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
     _audit(db, created_by, "create", "note", nid, json.dumps({"entity_type": entity_type, "entity_id": entity_id}))
     db.commit()
@@ -4000,12 +4262,11 @@ def renewal_alerts():
     db = get_db()
     days = int(request.args.get("days", "60"))
     today = datetime.now()
-    rows = db.execute("""SELECT c.contract_id, c.account_name, c.publication, c.contract_end,
+    rows = db.execute("""SELECT c.id, c.contract_id, c.account_name, c.publication, c.contract_end,
                           c.contract_start, c.status, c.agency_name, c.rep1
                           FROM sm_contracts c
-                          WHERE c.status = 'ACTIVE' AND c.contract_end IS NOT NULL AND c.contract_end != ''
-                          ORDER BY c.contract_end
-                          LIMIT 500""").fetchall()
+                          WHERE c.status IN ('ACTIVE','Active') AND c.contract_end IS NOT NULL AND c.contract_end != ''
+                          """).fetchall()
     result = []
     for r in rows:
         row = dict(r)
@@ -4032,13 +4293,308 @@ def renewal_alerts():
             continue
         row["days_remaining"] = days_remaining
         row["urgency"] = urgency
-        if days_remaining is not None and days_remaining <= days and days_remaining >= -90:
+        if days_remaining is not None and days_remaining <= days and days_remaining >= -365:
             rev = db.execute("SELECT COALESCE(SUM(bill_cost),0) as total_revenue FROM sm_page_history WHERE contract_num = ? AND canceled = 0",
                              (row["contract_id"],)).fetchone()
             row["total_revenue"] = rev["total_revenue"]
             result.append(row)
+    result.sort(key=lambda r: r.get("days_remaining") or 0)
     db.close()
     return jsonify(result)
+
+
+@app.route("/api/sales/renewals/csv")
+def renewals_csv():
+    db = get_db()
+    days = int(request.args.get("days", "60"))
+    q = request.args.get("q", "").strip().lower()
+    rep = request.args.get("rep", "")
+    pub = request.args.get("pub", "")
+    today = datetime.now()
+    rows = db.execute("""SELECT c.id, c.contract_id, c.account_name, c.publication, c.contract_end,
+                          c.contract_start, c.status, c.agency_name, c.rep1, c.type_ad
+                          FROM sm_contracts c
+                          WHERE c.status IN ('ACTIVE','Active') AND c.contract_end IS NOT NULL AND c.contract_end != ''
+                          """).fetchall()
+    result = []
+    for r in rows:
+        row = dict(r)
+        end_str = row.get("contract_end") or ""
+        row["contract_end_iso"] = _parse_sm_date(end_str)
+        row["contract_start_iso"] = _parse_sm_date(row.get("contract_start") or "")
+        try:
+            parts = end_str.split("/")
+            if len(parts) >= 3:
+                m, d = int(parts[0]), int(parts[1])
+                y = int(parts[2].split()[0])
+                y = y + 2000 if y < 100 else y
+                end_date = datetime(y, m, d)
+                days_remaining = (end_date - today).days
+            else:
+                continue
+        except (ValueError, IndexError):
+            continue
+        if days_remaining is not None and days_remaining <= days and days_remaining >= -365:
+            if q and q not in (row.get("account_name") or "").lower():
+                continue
+            if rep and row.get("rep1") != rep:
+                continue
+            if pub and row.get("publication") != pub:
+                continue
+            rev = db.execute("SELECT COALESCE(SUM(bill_cost),0) as total_revenue FROM sm_page_history WHERE contract_num = ? AND canceled = 0",
+                             (row["contract_id"],)).fetchone()
+            row["total_revenue"] = rev["total_revenue"]
+            row["days_remaining"] = days_remaining
+            result.append(row)
+    result.sort(key=lambda r: r.get("days_remaining") or 0)
+    db.close()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Account", "Publication", "Ad Type", "Rep", "Contract Start", "Contract End", "Days Remaining", "Status", "Revenue", "Agency"])
+    for r in result:
+        writer.writerow([
+            r.get("account_name", ""), r.get("publication", ""), r.get("type_ad", ""),
+            r.get("rep1", ""), r.get("contract_start_iso", ""), r.get("contract_end_iso", ""),
+            r.get("days_remaining", ""), r.get("status", ""),
+            f"{r.get('total_revenue', 0):.2f}", r.get("agency_name", "")
+        ])
+    buf.seek(0)
+    return Response(buf.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=renewals_export.csv"})
+
+
+@app.route("/api/sales/contracts/bulk-renew", methods=["POST"])
+def bulk_renew_contracts():
+    from dateutil.relativedelta import relativedelta
+    data = request.get_json()
+    ids = data.get("ids", [])
+    if not ids:
+        return jsonify({"error": "no ids provided"}), 400
+    db = get_db()
+    c = db.cursor()
+    created = []
+    errors = []
+    for cid in ids:
+        ct = c.execute("SELECT * FROM sm_contracts WHERE id = ?", (cid,)).fetchone()
+        if not ct:
+            errors.append({"id": cid, "error": "not found"})
+            continue
+        ct = dict(ct)
+        start_iso = _parse_sm_date(ct.get("contract_start", ""))
+        end_iso = _parse_sm_date(ct.get("contract_end", ""))
+        new_start = ""
+        new_end = ""
+        if start_iso and end_iso:
+            s = datetime.strptime(start_iso, "%Y-%m-%d")
+            e = datetime.strptime(end_iso, "%Y-%m-%d")
+            duration = relativedelta(e, s)
+            new_s = e + timedelta(days=1)
+            new_e = new_s + relativedelta(years=duration.years, months=duration.months, days=duration.days)
+            new_start = new_s.strftime("%m/%d/%y 00:00:00")
+            new_end = new_e.strftime("%m/%d/%y 00:00:00")
+        fields = ["account_name", "agency_name", "bill_name", "publication",
+                  "rate_card_num", "rate", "terms", "agency_discount",
+                  "credit_hold", "type_ad", "rep1", "territory1", "rep2", "territory2"]
+        vals = {f: ct.get(f, "") for f in fields}
+        vals["contract_start"] = new_start
+        vals["contract_end"] = new_end
+        vals["status"] = "Pending"
+        vals["notes"] = f"Renewed from contract {ct.get('contract_id', '')} (#{cid})"
+        vals["contract_id"] = ""
+        cols = ", ".join(vals.keys())
+        placeholders = ", ".join(["?"] * len(vals))
+        c.execute(f"INSERT INTO sm_contracts ({cols}) VALUES ({placeholders})", list(vals.values()))
+        new_id = c.execute("SELECT last_insert_rowid()").fetchone()[0]
+        created.append({"source_id": cid, "new_id": new_id, "account": ct.get("account_name", "")})
+    db.commit()
+    db.close()
+    return jsonify({"ok": True, "created": created, "errors": errors})
+
+
+@app.route("/api/sales/contracts/<int:contract_id>/proposal-pdf")
+def contract_proposal_pdf(contract_id):
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.pdfgen import canvas as pdfcanvas
+    from reportlab.lib import colors as rl_colors
+    db = get_db()
+    ct = db.execute("SELECT * FROM sm_contracts WHERE id = ?", (contract_id,)).fetchone()
+    if not ct:
+        db.close()
+        return jsonify({"error": "not found"}), 404
+    ct = dict(ct)
+    insertions = db.execute("""SELECT publication, type_ad, ad_size, color, bill_cost, issue_date
+                               FROM sm_page_history WHERE contract_num = ? AND canceled = 0
+                               ORDER BY issue_date""",
+                            (ct.get("contract_id", ""),)).fetchall()
+    insertions = [dict(r) for r in insertions]
+    db.close()
+    account = ct.get("account_name", "")
+    contact = ct.get("bill_name", "")
+    buf = io.BytesIO()
+    c = pdfcanvas.Canvas(buf, pagesize=letter)
+    w, h = letter
+    margin = 50
+    y = h - margin
+    logo_path = os.path.join(os.path.dirname(__file__), "asla_logo.png")
+    if os.path.exists(logo_path):
+        c.drawImage(logo_path, margin, y - 60, width=50, height=60, mask="auto")
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(margin + 60, y - 20, "ASLA")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin + 60, y - 35, "636 Eye Street NW, Washington, DC 20001")
+    c.drawString(margin + 60, y - 48, "202-898-2444")
+    y -= 80
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(margin, y, "Renewal Proposal")
+    y -= 22
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, y, f"Prepared for: {account}")
+    if contact:
+        y -= 15
+        c.drawString(margin, y, f"Attention: {contact}")
+    y -= 15
+    c.drawString(margin, y, f"Date: {datetime.now().strftime('%B %d, %Y')}")
+    y -= 15
+    pub = ct.get("publication", "")
+    if pub:
+        c.drawString(margin, y, f"Publication: {pub}")
+        y -= 15
+    start_iso = _parse_sm_date(ct.get("contract_start", ""))
+    end_iso = _parse_sm_date(ct.get("contract_end", ""))
+    if start_iso and end_iso:
+        c.drawString(margin, y, f"Contract Period: {start_iso} to {end_iso}")
+        y -= 15
+    y -= 15
+    if insertions:
+        c.setFont("Helvetica-Bold", 9)
+        cols = [margin, margin + 130, margin + 230, margin + 310, margin + 370, margin + 430]
+        for i, ht in enumerate(["Publication", "Ad Type", "Size", "Color", "Issue", "Cost"]):
+            c.drawString(cols[i], y, ht)
+        y -= 3
+        c.setStrokeColor(rl_colors.HexColor("#003a49"))
+        c.setLineWidth(1)
+        c.line(margin, y, w - margin, y)
+        y -= 14
+        c.setFont("Helvetica", 9)
+        total = 0
+        for ins in insertions:
+            if y < 100:
+                c.showPage()
+                y = h - margin
+                c.setFont("Helvetica", 9)
+            cost = ins.get("bill_cost") or 0
+            total += cost
+            c.drawString(cols[0], y, (ins.get("publication") or "")[:20])
+            c.drawString(cols[1], y, (ins.get("type_ad") or "")[:16])
+            c.drawString(cols[2], y, (ins.get("ad_size") or "")[:12])
+            c.drawString(cols[3], y, (ins.get("color") or "")[:10])
+            issue_iso = _parse_sm_date(ins.get("issue_date") or "")
+            c.drawString(cols[4], y, (issue_iso or "")[:10])
+            c.drawRightString(w - margin, y, f"${cost:,.2f}")
+            y -= 14
+        y -= 5
+        c.setLineWidth(1.5)
+        c.line(margin, y, w - margin, y)
+        y -= 16
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(margin, y, "Total Investment:")
+        c.drawRightString(w - margin, y, f"${total:,.2f}")
+    else:
+        c.setFont("Helvetica", 10)
+        c.drawString(margin, y, f"Ad Type: {ct.get('type_ad', '')}")
+        y -= 15
+        rate = ct.get("rate") or ""
+        if rate:
+            c.drawString(margin, y, f"Rate Card: {ct.get('rate_card_num', '')}  |  Rate: {rate}")
+            y -= 15
+    y -= 40
+    if y < 120:
+        c.showPage()
+        y = h - margin
+    c.setFont("Helvetica", 10)
+    c.drawString(margin, y, "Authorized Signature: ____________________________    Date: ________________")
+    c.save()
+    buf.seek(0)
+    return send_file(buf, mimetype="application/pdf", download_name=f"renewal_proposal_{account.replace(' ', '_')}.pdf")
+
+
+@app.route("/api/sales/contracts/<int:contract_id>/renewal-email-data")
+def renewal_email_data(contract_id):
+    db = get_db()
+    ct = db.execute("SELECT * FROM sm_contracts WHERE id = ?", (contract_id,)).fetchone()
+    if not ct:
+        db.close()
+        return jsonify({"error": "not found"}), 404
+    ct = dict(ct)
+    account = ct.get("account_name", "")
+    contact_row = db.execute("""SELECT firstname, lastname, email FROM contacts
+                                WHERE company = ? AND email IS NOT NULL AND email != ''
+                                ORDER BY jobtitle LIKE '%market%' DESC, jobtitle LIKE '%media%' DESC,
+                                jobtitle LIKE '%advertis%' DESC, createdate DESC
+                                LIMIT 1""", (account,)).fetchone()
+    contact = dict(contact_row) if contact_row else {}
+    insertions = db.execute("""SELECT COUNT(*) as cnt, SUM(bill_cost) as total
+                               FROM sm_page_history WHERE contract_num = ? AND canceled = 0""",
+                            (ct.get("contract_id", ""),)).fetchone()
+    db.close()
+    start_iso = _parse_sm_date(ct.get("contract_start", ""))
+    end_iso = _parse_sm_date(ct.get("contract_end", ""))
+    return jsonify({
+        "account_name": account,
+        "contact_name": f"{contact.get('firstname', '')} {contact.get('lastname', '')}".strip() if contact else ct.get("bill_name", ""),
+        "contact_email": contact.get("email", ""),
+        "publication": ct.get("publication", ""),
+        "ad_type": ct.get("type_ad", ""),
+        "contract_start": start_iso,
+        "contract_end": end_iso,
+        "rep": ct.get("rep1", ""),
+        "total_insertions": (insertions["cnt"] or 0) if insertions else 0,
+        "total_revenue": (insertions["total"] or 0) if insertions else 0,
+    })
+
+
+@app.route("/api/sales/revenue-forecast")
+def revenue_forecast():
+    db = get_db()
+    now = datetime.now()
+    current_year = now.year
+    prev_year = current_year - 1
+    yr2 = str(current_year)[2:]
+    prev_yr2 = str(prev_year)[2:]
+    months = []
+    for m in range(1, 13):
+        mm = f"{m:02d}"
+        cur_rev = db.execute("""SELECT COALESCE(SUM(bill_cost),0) as rev FROM sm_page_history
+                                WHERE canceled = 0 AND likelihood = 1
+                                AND issue_date LIKE ?""", (f"{mm}/%/{yr2} %",)).fetchone()["rev"]
+        prev_rev = db.execute("""SELECT COALESCE(SUM(bill_cost),0) as rev FROM sm_page_history
+                                 WHERE canceled = 0 AND likelihood = 1
+                                 AND issue_date LIKE ?""", (f"{mm}/%/{prev_yr2} %",)).fetchone()["rev"]
+        pipeline_rev = db.execute("""SELECT COALESCE(SUM(bill_cost),0) as rev FROM sm_page_history
+                                     WHERE canceled = 0 AND likelihood = 10
+                                     AND issue_date LIKE ?""", (f"{mm}/%/{yr2} %",)).fetchone()["rev"]
+        months.append({
+            "month": m,
+            "label": datetime(current_year, m, 1).strftime("%b"),
+            "current_confirmed": cur_rev,
+            "prior_year": prev_rev,
+            "pipeline": pipeline_rev,
+        })
+    lapsed = db.execute("""SELECT COUNT(DISTINCT account_name) as cnt FROM sm_page_history
+                           WHERE canceled = 0 AND likelihood = 1
+                           AND issue_date LIKE ? AND account_name NOT IN (
+                               SELECT DISTINCT account_name FROM sm_page_history
+                               WHERE canceled = 0 AND likelihood = 1 AND issue_date LIKE ?
+                           )""", (f"%/{prev_yr2} %", f"%/{yr2} %")).fetchone()
+    db.close()
+    return jsonify({
+        "current_year": current_year,
+        "prior_year": prev_year,
+        "months": months,
+        "lapsed_accounts": lapsed["cnt"] or 0,
+    })
+
 
 @app.route("/api/reports/commissions")
 def report_commissions():
